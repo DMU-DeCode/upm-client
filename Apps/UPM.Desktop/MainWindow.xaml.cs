@@ -6,20 +6,19 @@ using UPM.Models;
 
 namespace UPM.Desktop {
     public partial class MainWindow : Window {
-        // 필드 선언 (nullable 설정을 통해 CS8618 경고 방지)
         private readonly HardwareMonitor _monitor;
         private readonly DispatcherTimer _timer;
 
         public MainWindow() {
             InitializeComponent();
 
-            // 1. 하드웨어 수집 엔진 초기화
+            // 1. 수집 엔진 초기화
             _monitor = new HardwareMonitor();
 
-            // 2. 하드웨어 사양(Specs) 정보 가져오기
+            // 2. 초기 1회 하드웨어 사양 로드
             LoadHardwareSpecs();
 
-            // 3. 실시간 모니터링 타이머 설정 (1초 주기)
+            // 3. 실시간 업데이트 타이머 시작
             _timer = new DispatcherTimer();
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
@@ -29,12 +28,12 @@ namespace UPM.Desktop {
         private void LoadHardwareSpecs() {
             try {
                 var specs = _monitor.GetHardwareSpecs();
-                CpuNameText.Text = $"CPU: {specs.CpuName} ({specs.CpuCores}C/{specs.CpuThreads}T)";
+                CpuNameText.Text = $"CPU: {specs.CpuName}\n({specs.CpuCores}C / {specs.CpuThreads}T)";
                 GpuNameText.Text = $"GPU: {specs.GpuName}";
-                RamTotalText.Text = $"RAM: {specs.RamTotal}";
+                RamTotalText.Text = $"Total RAM: {specs.RamTotal}";
                 MainboardText.Text = $"MB: {specs.Mainboard}";
             } catch (Exception ex) {
-                MessageBox.Show($"사양 정보를 가져오는 중 오류 발생: {ex.Message}");
+                MessageBox.Show($"사양 로드 오류: {ex.Message}");
             }
         }
 
@@ -42,14 +41,27 @@ namespace UPM.Desktop {
             // 실시간 데이터 수집
             var status = _monitor.GetCurrentStatus();
 
-            // UI 업데이트 (숫자 및 텍스트) [cite: 177-184]
-            CpuUsageText.Text = $"CPU Usage: {status.CpuUsage}%";
-
-            // 추가적인 UI 요소(RAM, GPU 온도 등)가 XAML에 있다면 여기서 업데이트
-            // 예: GpuTempText.Text = $"{status.GpuTemperature}°C";
+            // 게이지 바늘 업데이트
+            CpuGauge.Value = status.CpuUsage;
+            RamGauge.Value = status.RamUsage;
+            GpuGauge.Value = status.GpuTemperature;
         }
 
-        // 프로그램 종료 시 리소스 해제
+        private void BoostButton_Click(object sender, RoutedEventArgs e) {
+            // 버튼 비활성화로 중복 클릭 방지
+            BoostButton.IsEnabled = false;
+            BoostButton.Content = "BOOSTING...";
+
+            // 시스템 최적화 실행
+            int count = _monitor.OptimizeSystem();
+
+            MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다!", "UPM Boost 완료");
+
+            // 버튼 복구
+            BoostButton.IsEnabled = true;
+            BoostButton.Content = "QUICK BOOST";
+        }
+
         protected override void OnClosed(EventArgs e) {
             _timer.Stop();
             _monitor.Dispose();

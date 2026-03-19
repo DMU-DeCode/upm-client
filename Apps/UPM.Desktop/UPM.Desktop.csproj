@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="LiveCharts.Wpf" Version="0.9.7" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Libraries\UPM.Communication\UPM.Communication.csproj" />
     <ProjectReference Include="..\..\Libraries\UPM.Core\UPM.Core.csproj" />
     <ProjectReference Include="..\..\Shared\UPM.Models\UPM.Models.csproj" />

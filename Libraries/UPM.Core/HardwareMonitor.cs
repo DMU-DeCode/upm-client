@@ -88,5 +88,36 @@ namespace UPM.Core {
             _computer?.Close();
             _cpuCounter?.Dispose();
         }
+        // UPM.Core -> HardwareMonitor.cs 내부에 추가
+
+        /// <summary>
+        /// 불필요한 프로세스를 정리하여 시스템 메모리를 최적화합니다.
+        /// </summary>
+        /// <returns>종료된 프로세스의 개수</returns>
+        public int OptimizeSystem() {
+            int clearedCount = 0;
+
+            // 정리 대상 프로세스 리스트 (사용자가 필요에 따라 수정 가능)
+            // 예: 메모리 점유가 높은 브라우저나 단순 계산기 등
+            string[] targetProcesses = { "Notepad", "CalculatorApp", "msedge" };
+
+            foreach (var name in targetProcesses) {
+                try {
+                    // 실행 중인 해당 이름의 프로세스들을 모두 찾음
+                    var processes = Process.GetProcessesByName(name);
+                    foreach (var p in processes) {
+                        p.Kill(); // 프로세스 강제 종료
+                        p.WaitForExit(1000); // 종료될 때까지 잠시 대기
+                        clearedCount++;
+                    }
+                } catch (Exception) {
+                    // 권한이 없거나 이미 종료된 경우 무시
+                    continue;
+                }
+            }
+
+            return clearedCount;
+        }
     }
 }
+
