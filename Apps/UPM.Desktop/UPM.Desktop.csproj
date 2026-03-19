@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libraries\UPM.Communication\UPM.Communication.csproj" />
+    <ProjectReference Include="..\..\Libraries\UPM.Core\UPM.Core.csproj" />
+    <ProjectReference Include="..\..\Shared\UPM.Models\UPM.Models.csproj" />
+  </ItemGroup>
+
+</Project>
