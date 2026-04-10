@@ -36,10 +36,11 @@ namespace UPM.Desktop {
                 RamTotalText.Text = $"Total RAM: {specs.RamTotal}";
                 MainboardText.Text = $"MB: {specs.Mainboard}";
 
+                // [추가] 서버로 사양 정보 전송
                 await _api.SendSpecsAsync(specs);
             } catch (Exception ex) {
                 MessageBox.Show($"사양 로드 오류: {ex.Message}");
-            }6
+            }
         }
 
         private async void Timer_Tick(object? sender, EventArgs e) {
@@ -51,6 +52,7 @@ namespace UPM.Desktop {
             RamGauge.Value = status.RamUsage;
             GpuGauge.Value = status.GpuTemperature;
 
+            // [추가] 서버로 실시간 상태 전송
             await _api.SendStatusAsync(status);
         }
 
