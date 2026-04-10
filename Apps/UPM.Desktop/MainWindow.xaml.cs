@@ -2,12 +2,15 @@
 using System.Windows;
 using System.Windows.Threading;
 using UPM.Core;
+using UPM.Communication;
 using UPM.Models;
 
 namespace UPM.Desktop {
     public partial class MainWindow : Window {
         private readonly HardwareMonitor _monitor;
         private readonly DispatcherTimer _timer;
+
+        private readonly UpmApiService _api = new UpmApiService();
 
         public MainWindow() {
             InitializeComponent();
@@ -25,19 +28,21 @@ namespace UPM.Desktop {
             _timer.Start();
         }
 
-        private void LoadHardwareSpecs() {
+        private async void LoadHardwareSpecs() {
             try {
                 var specs = _monitor.GetHardwareSpecs();
                 CpuNameText.Text = $"CPU: {specs.CpuName}\n({specs.CpuCores}C / {specs.CpuThreads}T)";
                 GpuNameText.Text = $"GPU: {specs.GpuName}";
                 RamTotalText.Text = $"Total RAM: {specs.RamTotal}";
                 MainboardText.Text = $"MB: {specs.Mainboard}";
+
+                await _api.SendSpecsAsync(specs);
             } catch (Exception ex) {
                 MessageBox.Show($"사양 로드 오류: {ex.Message}");
-            }
+            }6
         }
 
-        private void Timer_Tick(object? sender, EventArgs e) {
+        private async void Timer_Tick(object? sender, EventArgs e) {
             // 실시간 데이터 수집
             var status = _monitor.GetCurrentStatus();
 
@@ -45,6 +50,8 @@ namespace UPM.Desktop {
             CpuGauge.Value = status.CpuUsage;
             RamGauge.Value = status.RamUsage;
             GpuGauge.Value = status.GpuTemperature;
+
+            await _api.SendStatusAsync(status);
         }
 
         private void BoostButton_Click(object sender, RoutedEventArgs e) {
