@@ -61,16 +61,43 @@ namespace UPM.Core {
         }
 
         public SystemStatusModel GetCurrentStatus() {
-            var status = new SystemStatusModel { Timestamp = DateTime.Now, PcName = Environment.MachineName };
-            status.CpuUsage = Math.Round(_cpuCounter.NextValue(), 1);
+            var status = new SystemStatusModel { 
+                Timestamp = DateTime.Now, 
+                MachineId = Environment.MachineName 
+            };
+            
+            status.CpuUsagePercent = Math.Round(_cpuCounter.NextValue(), 1);
 
             using (var ramCounter = new PerformanceCounter("Memory", "Available MBytes")) {
                 double availableRam = ramCounter.NextValue();
-                status.RamUsage = Math.Round(((_totalRamMBytes - availableRam) / _totalRamMBytes) * 100, 1);
+                status.RamUsagePercent = Math.Round(((_totalRamMBytes - availableRam) / _totalRamMBytes) * 100, 1);
             }
 
-            status.GpuTemperature = GetGpuTemperature();
+            status.GpuTemperatureCelsius = GetGpuTemperature();
+
+            // 상위 프로세스 정보 추가 (메모리 사용량 기준 상위 3개)
+            try {
+                status.TopProcesses = Process.GetProcesses()
+                    .Where(p => !string.IsNullOrEmpty(p.ProcessName))
+                    .OrderByDescending(p => p.WorkingSet64)
+                    .Take(3)
+                    .Select(p => new ProcessInfoModel {
+                        ProcessId = p.Id,
+                        ProcessName = p.ProcessName,
+                        MemoryWorkingSetBytes = p.WorkingSet64,
+                        IsSystemCritical = IsCritical(p.ProcessName)
+                    })
+                    .ToList();
+            } catch {
+                status.TopProcesses = new List<ProcessInfoModel>();
+            }
+
             return status;
+        }
+
+        private bool IsCritical(string name) {
+            string[] criticals = { "svchost", "explorer", "System", "csrss", "wininit" };
+            return criticals.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase));
         }
 
         private double GetGpuTemperature() {

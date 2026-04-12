@@ -1,27 +1,45 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace UPM.Models {
     /// <summary>
-    /// PC의 실시간 성능 상태 정보를 담는 모델 클래스입니다.
+    /// 서버의 ProcessInfo Pydantic 모델과 일치하는 클래스입니다.
+    /// </summary>
+    public class ProcessInfoModel {
+        [JsonPropertyName("processId")]
+        public int ProcessId { get; set; }
+
+        [JsonPropertyName("processName")]
+        public string ProcessName { get; set; } = "";
+
+        [JsonPropertyName("memoryWorkingSetBytes")]
+        public long MemoryWorkingSetBytes { get; set; }
+
+        [JsonPropertyName("isSystemCritical")]
+        public bool IsSystemCritical { get; set; }
+    }
+
+    /// <summary>
+    /// v3.0 API 규격에 100% 맞춘 시스템 성능 상태 모델입니다.
     /// </summary>
     public class SystemStatusModel {
-        // 1. CPU 정보
-        public double CpuUsage { get; set; }           // CPU 사용량 (%)
-        public string? CpuStatus { get; set; }         // CPU 상태 메시지
+        [JsonPropertyName("machineId")]
+        public string? MachineId { get; set; }
 
-        // 2. RAM 정보
-        public double RamUsage { get; set; }           // RAM 점유율 (%)
-        public string? RamStatus { get; set; }         // RAM 상태 메시지
+        [JsonPropertyName("cpuUsagePercent")]
+        public double CpuUsagePercent { get; set; }
 
-        // 3. GPU 정보
-        public double GpuTemperature { get; set; }     // GPU 온도 (°C)
+        [JsonPropertyName("ramUsagePercent")]
+        public double RamUsagePercent { get; set; }
 
-        // 4. 디스크 정보
-        public double DiskUsage { get; set; }          // 디스크 사용량 (%)
-        public string? DiskStatus { get; set; }        // 디스크 상태 메시지
+        [JsonPropertyName("gpuTemperatureCelsius")]
+        public double GpuTemperatureCelsius { get; set; }
 
-        // 5. 메타 데이터
-        public DateTime Timestamp { get; set; }        // 데이터 수집 시간
-        public string? PcName { get; set; }            // PC 식별 이름
+        [JsonPropertyName("timestamp")]
+        public DateTime Timestamp { get; set; }
+
+        [JsonPropertyName("topProcesses")]
+        public List<ProcessInfoModel> TopProcesses { get; set; } = new();
     }
 }
