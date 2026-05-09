@@ -61,16 +61,53 @@ namespace UPM.Core {
         }
 
         public SystemStatusModel GetCurrentStatus() {
-            var status = new SystemStatusModel { Timestamp = DateTime.Now, PcName = Environment.MachineName };
-            status.CpuUsage = Math.Round(_cpuCounter.NextValue(), 1);
+            var status = new SystemStatusModel { 
+                Timestamp = DateTime.Now, 
+                MachineId = Environment.MachineName 
+            };
+            
+            status.CpuUsagePercent = Math.Round(_cpuCounter.NextValue(), 1);
 
             using (var ramCounter = new PerformanceCounter("Memory", "Available MBytes")) {
                 double availableRam = ramCounter.NextValue();
-                status.RamUsage = Math.Round(((_totalRamMBytes - availableRam) / _totalRamMBytes) * 100, 1);
+                status.RamUsagePercent = Math.Round(((_totalRamMBytes - availableRam) / _totalRamMBytes) * 100, 1);
             }
 
-            status.GpuTemperature = GetGpuTemperature();
+            status.GpuTemperatureCelsius = GetGpuTemperature();
+
+            // 상위 프로세스 (작업 집합 메모리 기준) — 접근 불가 프로세스는 건너뜀
+            try {
+                var rows = new List<ProcessInfoModel>();
+                foreach (var p in Process.GetProcesses()) {
+                    try {
+                        if (string.IsNullOrEmpty(p.ProcessName)) continue;
+                        rows.Add(new ProcessInfoModel {
+                            ProcessId = p.Id,
+                            ProcessName = p.ProcessName,
+                            MemoryWorkingSetBytes = p.WorkingSet64,
+                            IsSystemCritical = IsCritical(p.ProcessName)
+                        });
+                    } catch {
+                        // 일부 시스템/보호 프로세스는 지표 읽기 실패
+                    } finally {
+                        try { p.Dispose(); } catch { /* ignore */ }
+                    }
+                }
+
+                status.TopProcesses = rows
+                    .OrderByDescending(x => x.MemoryWorkingSetBytes)
+                    .Take(8)
+                    .ToList();
+            } catch {
+                status.TopProcesses = new List<ProcessInfoModel>();
+            }
+
             return status;
+        }
+
+        private bool IsCritical(string name) {
+            string[] criticals = { "svchost", "explorer", "System", "csrss", "wininit" };
+            return criticals.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase));
         }
 
         private double GetGpuTemperature() {

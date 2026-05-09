@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\UPM.Models\UPM.Models.csproj" />
+    <ProjectReference Include="..\UPM.Communication\UPM.Communication.csproj" />
   </ItemGroup>
 
 </Project>

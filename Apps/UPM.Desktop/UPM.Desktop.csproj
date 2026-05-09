@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- net8.0-windows → windows7.0 폴백 시 NU1701 다발; Win10 1809+ 명시 + LiveCharts 전이 경고 억제 -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -10,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LiveCharts.Wpf" Version="0.9.7" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
