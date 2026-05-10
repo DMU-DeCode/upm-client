@@ -12,12 +12,17 @@
 
   <ItemGroup>
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.2" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.11" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Libraries\UPM.Communication\UPM.Communication.csproj" />
     <ProjectReference Include="..\..\Libraries\UPM.Core\UPM.Core.csproj" />
     <ProjectReference Include="..\..\Shared\UPM.Models\UPM.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\GpuTemperatureIcon.png" />
   </ItemGroup>
 
 </Project>

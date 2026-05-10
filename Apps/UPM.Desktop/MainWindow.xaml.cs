@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using UPM.Core;
 using UPM.Models;
@@ -16,7 +19,7 @@ namespace UPM.Desktop {
 
         public MainWindow() {
             InitializeComponent();
-            ApplyProcessListVisibility(true);
+            ApplyHardwareDetailVisibility(DetailExpandToggle.IsChecked == true);
 
             // ViewModel 참조 가져오기
             _viewModel = DataContext as DashboardViewModel;
@@ -52,7 +55,7 @@ namespace UPM.Desktop {
                 // 서버로 사양 전송 (필요시 활성화)
                 // _apiClient.SendHardwareSpecsAsync(specs);
             } catch (Exception ex) {
-                MessageBox.Show($"사양 로드 오류: {ex.Message}");
+                MessageBox.Show($"사양을 불러오지 못했습니다.\n{ex.Message}", "UPM");
             }
         }
 
@@ -60,21 +63,18 @@ namespace UPM.Desktop {
             // 실시간 데이터 수집
             var status = _monitor.GetCurrentStatus();
 
-            // ViewModel 업데이트 (게이지 수치 반영)
+            // ViewModel 업데이트 (게이지 수치 · 호 방향 색 조각)
             if (_viewModel != null) {
                 var cpu = status.CpuUsagePercent;
-                _viewModel.CpuValue.Value = cpu;
-                _viewModel.CpuTrackValue.Value = 100 - cpu;
-
                 var ram = status.RamUsagePercent;
-                _viewModel.RamValue.Value = ram;
-                _viewModel.RamTrackValue.Value = 100 - ram;
-
+                var gpuUsage = status.GpuUsagePercent;
                 var gpuC = status.GpuTemperatureCelsius;
-                var gpuArc = Math.Clamp(gpuC, 0, 100);
-                _viewModel.GpuValue.Value = gpuArc;
-                _viewModel.GpuTrackValue.Value = 100 - gpuArc;
-                _viewModel.GpuTemperatureCelsius.Value = gpuC;
+
+                _viewModel.ApplyCpuGauge(cpu);
+                _viewModel.ApplyRamGauge(ram);
+                _viewModel.ApplyGpuGauge(gpuUsage, gpuC);
+
+                ApplyGaugeHeatDots(cpu, ram, gpuUsage);
             }
 
             TopProcessItems.ItemsSource = status.TopProcesses;
@@ -91,22 +91,39 @@ namespace UPM.Desktop {
             }
         }
 
-        private void ProcessListToggle_OnChecked(object sender, RoutedEventArgs e) {
-            ApplyProcessListVisibility(true);
+        private void DetailExpandToggle_OnChecked(object sender, RoutedEventArgs e) {
+            ApplyHardwareDetailVisibility(true);
         }
 
-        private void ProcessListToggle_OnUnchecked(object sender, RoutedEventArgs e) {
-            ApplyProcessListVisibility(false);
+        private void DetailExpandToggle_OnUnchecked(object sender, RoutedEventArgs e) {
+            ApplyHardwareDetailVisibility(false);
         }
 
-        private void ApplyProcessListVisibility(bool visible) {
-            // InitializeComponent 중 IsChecked로 Checked가 뜰 때 자식 필드가 아직 null일 수 있음
-            if (ProcessDetailsHost == null || ProcessListToggle == null)
+        private void ProcessScrollViewer_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (sender is not ScrollViewer sv)
                 return;
-            ProcessDetailsHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-            ProcessListToggle.Content = visible ? "프로세스 숨기기" : "프로세스 표시";
+            sv.ScrollToVerticalOffset(sv.VerticalOffset - e.Delta / 3.0);
+            e.Handled = true;
+        }
+
+        private void ApplyHardwareDetailVisibility(bool expanded) {
+            if (HardwareDetailHost == null || DetailExpandToggle == null)
+                return;
+            HardwareDetailHost.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+            DetailExpandToggle.Content = expanded ? "간단히 보기" : "자세히 보기";
             if (IsLoaded)
                 RefreshWindowHeightToContent();
+        }
+
+        private void ApplyGaugeHeatDots(double cpuPercent, double ramPercent, double gpuHeatPercent) {
+            CpuHeatDot.Fill = HeatBrush(cpuPercent);
+            RamHeatDot.Fill = HeatBrush(ramPercent);
+            GpuHeatDot.Fill = HeatBrush(gpuHeatPercent);
+        }
+
+        private static SolidColorBrush HeatBrush(double percent) {
+            var c = DashboardViewModel.UsageHeatColor(percent);
+            return new SolidColorBrush(Color.FromRgb(c.Red, c.Green, c.Blue));
         }
 
         private void RefreshWindowHeightToContent() {
@@ -118,14 +135,16 @@ namespace UPM.Desktop {
 
         private void BoostButton_Click(object sender, RoutedEventArgs e) {
             BoostButton.IsEnabled = false;
-            BoostButton.Content = "BOOSTING...";
+            BoostButtonLabel.Text = "최적화 중…";
+            BoostButtonIcon.Visibility = Visibility.Collapsed;
 
             int count = _monitor.OptimizeSystem();
 
-            MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다!", "UPM Boost 완료");
+            MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
 
             BoostButton.IsEnabled = true;
-            BoostButton.Content = "QUICK BOOST";
+            BoostButtonLabel.Text = "빠른 최적화";
+            BoostButtonIcon.Visibility = Visibility.Visible;
         }
 
         protected override void OnClosed(EventArgs e) {

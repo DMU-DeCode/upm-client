@@ -16,6 +16,14 @@ namespace UPM.Models {
         [JsonPropertyName("memoryWorkingSetBytes")]
         public long MemoryWorkingSetBytes { get; set; }
 
+        /// <summary>현재 사용 중인 RAM(설치량 − 여유) 대비 이 프로세스 작업 집합 비율(%).</summary>
+        [JsonPropertyName("memoryPercentOfUsedRam")]
+        public double MemoryPercentOfUsedRam { get; set; }
+
+        /// <summary>아이콘 추출용 실행 파일 경로 — API 전송 제외.</summary>
+        [JsonIgnore]
+        public string? ExecutablePath { get; set; }
+
         [JsonPropertyName("isSystemCritical")]
         public bool IsSystemCritical { get; set; }
     }
@@ -32,6 +40,9 @@ namespace UPM.Models {
 
         [JsonPropertyName("ramUsagePercent")]
         public double RamUsagePercent { get; set; }
+
+        [JsonPropertyName("gpuUsagePercent")]
+        public double GpuUsagePercent { get; set; }
 
         [JsonPropertyName("gpuTemperatureCelsius")]
         public double GpuTemperatureCelsius { get; set; }

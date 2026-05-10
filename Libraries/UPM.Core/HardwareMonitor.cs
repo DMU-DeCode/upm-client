@@ -8,12 +8,16 @@ using LibreHardwareMonitor.Hardware;
 namespace UPM.Core {
     public class HardwareMonitor : IDisposable {
         private readonly PerformanceCounter _cpuCounter;
+        private readonly PerformanceCounter _availableRamCounter;
         private readonly Computer _computer;
         private double _totalRamMBytes;
 
         public HardwareMonitor() {
             _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             _cpuCounter.NextValue();
+
+            _availableRamCounter = new PerformanceCounter("Memory", "Available MBytes");
+            _availableRamCounter.NextValue();
 
             _computer = new Computer { IsGpuEnabled = true };
             _computer.Open();
@@ -68,11 +72,16 @@ namespace UPM.Core {
             
             status.CpuUsagePercent = Math.Round(_cpuCounter.NextValue(), 1);
 
-            using (var ramCounter = new PerformanceCounter("Memory", "Available MBytes")) {
-                double availableRam = ramCounter.NextValue();
-                status.RamUsagePercent = Math.Round(((_totalRamMBytes - availableRam) / _totalRamMBytes) * 100, 1);
-            }
+            // 물리 메모리 중 현재 사용 중인 양(MB) = 설치량(MB) − 여유(MB). 프로세스 막대 분모로 동일 값 사용.
+            double availableRamMb = _availableRamCounter.NextValue();
+            double usedRamMBytes = Math.Max(0, _totalRamMBytes - availableRamMb);
+            status.RamUsagePercent = _totalRamMBytes > 0
+                ? Math.Round(usedRamMBytes / _totalRamMBytes * 100, 1)
+                : 0;
 
+            var usedRamBytes = usedRamMBytes * 1024.0 * 1024.0;
+
+            status.GpuUsagePercent = GetGpuUsage();
             status.GpuTemperatureCelsius = GetGpuTemperature();
 
             // 상위 프로세스 (작업 집합 메모리 기준) — 접근 불가 프로세스는 건너뜀
@@ -81,10 +90,18 @@ namespace UPM.Core {
                 foreach (var p in Process.GetProcesses()) {
                     try {
                         if (string.IsNullOrEmpty(p.ProcessName)) continue;
+                        string? exePath = null;
+                        try {
+                            exePath = p.MainModule?.FileName;
+                        } catch {
+                            /* 보호 프로세스 등 */
+                        }
+
                         rows.Add(new ProcessInfoModel {
                             ProcessId = p.Id,
                             ProcessName = p.ProcessName,
                             MemoryWorkingSetBytes = p.WorkingSet64,
+                            ExecutablePath = exePath,
                             IsSystemCritical = IsCritical(p.ProcessName)
                         });
                     } catch {
@@ -94,9 +111,15 @@ namespace UPM.Core {
                     }
                 }
 
+                // 각 프로세스 WS ÷ (현재 사용 중인 물리 RAM 바이트). 설치 전체 RAM 기준이 아님.
                 status.TopProcesses = rows
                     .OrderByDescending(x => x.MemoryWorkingSetBytes)
                     .Take(8)
+                    .Select(x => {
+                        if (usedRamBytes > 0)
+                            x.MemoryPercentOfUsedRam = Math.Min(100, Math.Round(x.MemoryWorkingSetBytes / usedRamBytes * 100.0, 1));
+                        return x;
+                    })
                     .ToList();
             } catch {
                 status.TopProcesses = new List<ProcessInfoModel>();
@@ -121,9 +144,26 @@ namespace UPM.Core {
             return 0;
         }
 
+        /// <summary>인식된 NVIDIA/AMD GPU의 Load 센서 중 전역 최대값을 사용률(0~100%)으로 사용합니다.</summary>
+        private double GetGpuUsage() {
+            double best = 0;
+            foreach (var hardware in _computer.Hardware) {
+                if (hardware.HardwareType != HardwareType.GpuNvidia && hardware.HardwareType != HardwareType.GpuAmd)
+                    continue;
+                hardware.Update();
+                foreach (var s in hardware.Sensors) {
+                    if (s.SensorType != SensorType.Load || s.Value is null) continue;
+                    var v = (double)s.Value.Value;
+                    if (v > best) best = v;
+                }
+            }
+            return best > 0 ? Math.Round(Math.Clamp(best, 0, 100), 1) : 0;
+        }
+
         public void Dispose() {
             _computer?.Close();
             _cpuCounter?.Dispose();
+            _availableRamCounter?.Dispose();
         }
         // UPM.Core -> HardwareMonitor.cs 내부에 추가
 
