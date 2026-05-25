@@ -128,10 +128,11 @@ namespace UPM.Core {
             return status;
         }
 
-        private bool IsCritical(string name) {
-            string[] criticals = { "svchost", "explorer", "System", "csrss", "wininit" };
-            return criticals.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase));
-        }
+        private static readonly string[] _criticalProcessNames =
+            { "svchost", "explorer", "System", "csrss", "wininit" };
+
+        private static bool IsCritical(string name) =>
+            _criticalProcessNames.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase));
 
         private double GetGpuTemperature() {
             foreach (var hardware in _computer.Hardware) {
@@ -165,7 +166,6 @@ namespace UPM.Core {
             _cpuCounter?.Dispose();
             _availableRamCounter?.Dispose();
         }
-        // UPM.Core -> HardwareMonitor.cs 내부에 추가
 
         /// <summary>
         /// 불필요한 프로세스를 정리하여 시스템 메모리를 최적화합니다.

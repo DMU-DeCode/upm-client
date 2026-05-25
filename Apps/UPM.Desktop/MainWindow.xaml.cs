@@ -5,7 +5,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using UPM.Core;
-using UPM.Models;
 using UPM.Communication;
 using UPM.Desktop.ViewModels;
 
@@ -14,6 +13,7 @@ namespace UPM.Desktop {
         private readonly HardwareMonitor _monitor;
         private readonly DispatcherTimer _timer;
         private readonly ApiServerClient _apiClient;
+        private readonly MobileControlHttpServer _controlServer;
         private int _tickCounter = 0;
         private DashboardViewModel? _viewModel;
 
@@ -26,7 +26,14 @@ namespace UPM.Desktop {
 
             // 1. 수집 엔진 및 서버 클라이언트 초기화
             _monitor = new HardwareMonitor();
-            _apiClient = new ApiServerClient("http://localhost:8000");
+            _apiClient = new ApiServerClient(UpmAppSettings.MetricsServerBaseUrl);
+
+            _controlServer = new MobileControlHttpServer(_monitor);
+            try {
+                _controlServer.Start();
+            } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine($"[UPM] 모바일 제어 서버를 시작하지 못했습니다: {ex.Message}");
+            }
 
             // 2. 초기 1회 하드웨어 사양 로드 및 서버 전송
             LoadHardwareSpecs();
@@ -149,6 +156,8 @@ namespace UPM.Desktop {
 
         protected override void OnClosed(EventArgs e) {
             _timer.Stop();
+            _controlServer.Dispose();
+            _apiClient.Dispose();
             _monitor.Dispose();
             base.OnClosed(e);
         }

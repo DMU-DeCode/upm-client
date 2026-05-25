@@ -54,8 +54,8 @@ README 구성은 [yewon-Noh/readme-template (backend)](https://github.com/yewon-
 | 프로젝트 | 역할 |
 |:---|:---|
 | `UPM.Desktop` | WPF 앱, UI·타이머·VM 연동 |
-| `UPM.Core` | 하드웨어 수집, 프로세스 상위, Boost |
-| `UPM.Communication` | `ApiServerClient` (HttpClient + `System.Net.Http.Json`) |
+| `UPM.Core` | 하드웨어 수집, 최적화, 전원 제어, 모바일 제어 HTTP 서버 |
+| `UPM.Communication` | 메트릭 전송 `ApiServerClient` |
 | `UPM.Models` | `SystemStatusModel`, `HardwareSpecModel`, `ProcessInfoModel` 등 DTO |
 
 ### Tools
@@ -68,26 +68,12 @@ README 구성은 [yewon-Noh/readme-template (backend)](https://github.com/yewon-
 ## 프로젝트 아키텍처
 
 ```mermaid
-flowchart TB
-    subgraph desktop [UPM.Desktop]
-        UI[MainWindow.xaml]
-        VM[DashboardViewModel]
-    end
-    subgraph core [UPM.Core]
-        HM[HardwareMonitor]
-    end
-    subgraph comm [UPM.Communication]
-        API[ApiServerClient]
-    end
-    subgraph models [UPM.Models]
-        DTO[DTOs]
-    end
-    UI --> VM
-    UI --> HM
-    UI --> API
-    HM --> DTO
-    API --> DTO
-    API --> SRV[(REST 서버)]
+flowchart LR
+    Mobile[UPM_Mobile] --> Ngrok[ngrok]
+    Ngrok --> Server[UPM_Server :8000]
+    Desktop[UPM.Desktop] -->|POST metrics| Server
+    Server -->|POST shutdown optimize| Agent[MobileControlHttpServer :8787]
+    Agent --> Desktop
 ```
 
 솔루션 폴더 구조 요약:
@@ -95,8 +81,8 @@ flowchart TB
 | 경로 | 설명 |
 |:---|:---|
 | `Apps/UPM.Desktop/` | 실행 진입점, XAML, `Converters/` |
-| `Libraries/UPM.Core/` | 모니터링·최적화 |
-| `Libraries/UPM.Communication/` | HTTP 클라이언트 |
+| `Libraries/UPM.Core/` | `HardwareMonitor`, `SystemPowerController`, `MobileControlHttpServer`, `UpmAppSettings` |
+| `Libraries/UPM.Communication/` | `ApiServerClient` |
 | `Shared/UPM.Models/` | 공유 모델 |
 
 ---
@@ -132,15 +118,23 @@ dotnet build UPM.sln -c Release
 dotnet run --project Apps/UPM.Desktop/UPM.Desktop.csproj
 ```
 
-### 서버 URL 변경
+### 연동 실행 순서 (모바일 포함)
 
-`Apps/UPM.Desktop/MainWindow.xaml.cs` 생성자에서:
+1. **UPM.Desktop** 실행 (로컬 제어 포트 `8787` 리스닝)
+2. **UPM_Server**: `python main.py` (`0.0.0.0:8000`)
+3. **ngrok**: `ngrok http 8000` → URL을 UPM_Mobile `baseUrl`에 반영
+4. **UPM_Mobile** 실행
+
+### 설정 변경
+
+`Libraries/UPM.Core/UpmAppSettings.cs`:
 
 ```csharp
-_apiClient = new ApiServerClient("http://localhost:8000");
+public const string MetricsServerBaseUrl = "http://localhost:8000";
+public const int MobileControlPort = 8787;
 ```
 
-원하는 `baseUrl`로 바꿉니다. 서버가 없으면 주기적 전송은 실패 로그만 남습니다.
+서버가 없으면 메트릭 전송 실패는 디버그 출력만 남고 UI는 계속 동작합니다.
 
 ---
 
