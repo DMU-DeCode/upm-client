@@ -1,4 +1,4 @@
-# UPM — Universal PC Mannager
+# UPM — Universal PC Manager
 
 Windows PC의 하드웨어·리소스를 실시간으로 보여 주고, 선택적으로 원격 서버로 메트릭을 보내는 **WPF 데스크톱** 프로젝트입니다.
 
