@@ -41,6 +41,14 @@ namespace UPM.Models {
         [JsonPropertyName("ramUsagePercent")]
         public double RamUsagePercent { get; set; }
 
+        /// <summary>현재 사용 중인 RAM 용량 (GB). 모바일 대시보드 수치 표시용.</summary>
+        [JsonPropertyName("ramUsedGb")]
+        public double RamUsedGb { get; set; }
+
+        /// <summary>설치된 총 RAM 용량 (GB). 모바일 대시보드 수치 표시용.</summary>
+        [JsonPropertyName("ramTotalGb")]
+        public double RamTotalGb { get; set; }
+
         [JsonPropertyName("gpuUsagePercent")]
         public double GpuUsagePercent { get; set; }
 
