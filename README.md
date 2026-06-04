@@ -142,10 +142,6 @@ public const int MobileControlPort = 8787;
 
 | 역할 | 비고 |
 |:---:|:---|
-| Maintainer | *(GitHub 프로필·이름을 추가하세요)* |
+| Maintainer | [@Dungsu](https://github.com/Dungsu) |
 
 ---
-
-## 라이선스
-
-개인·교육 목적으로 작성된 프로젝트입니다. 필요 시 저장소 루트에 `LICENSE`를 추가하세요.
