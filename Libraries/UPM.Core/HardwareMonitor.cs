@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Management;
@@ -65,11 +65,11 @@ namespace UPM.Core {
         }
 
         public SystemStatusModel GetCurrentStatus() {
-            var status = new SystemStatusModel { 
-                Timestamp = DateTime.Now, 
-                MachineId = Environment.MachineName 
+            var status = new SystemStatusModel {
+                Timestamp = DateTime.Now,
+                MachineId = Environment.MachineName
             };
-            
+
             status.CpuUsagePercent = Math.Round(_cpuCounter.NextValue(), 1);
 
             // 물리 메모리 중 현재 사용 중인 양(MB) = 설치량(MB) − 여유(MB). 프로세스 막대 분모로 동일 값 사용.
@@ -78,6 +78,10 @@ namespace UPM.Core {
             status.RamUsagePercent = _totalRamMBytes > 0
                 ? Math.Round(usedRamMBytes / _totalRamMBytes * 100, 1)
                 : 0;
+
+            // 모바일 대시보드 수치 표시용 (예: 11.2GB / 16GB)
+            status.RamUsedGb = Math.Round(usedRamMBytes / 1024.0, 2);
+            status.RamTotalGb = Math.Round(_totalRamMBytes / 1024.0, 2);
 
             var usedRamBytes = usedRamMBytes * 1024.0 * 1024.0;
 
@@ -174,21 +178,17 @@ namespace UPM.Core {
         public int OptimizeSystem() {
             int clearedCount = 0;
 
-            // 정리 대상 프로세스 리스트 (사용자가 필요에 따라 수정 가능)
-            // 예: 메모리 점유가 높은 브라우저나 단순 계산기 등
             string[] targetProcesses = { "Notepad", "CalculatorApp", "msedge" };
 
             foreach (var name in targetProcesses) {
                 try {
-                    // 실행 중인 해당 이름의 프로세스들을 모두 찾음
                     var processes = Process.GetProcessesByName(name);
                     foreach (var p in processes) {
-                        p.Kill(); // 프로세스 강제 종료
-                        p.WaitForExit(1000); // 종료될 때까지 잠시 대기
+                        p.Kill();
+                        p.WaitForExit(1000);
                         clearedCount++;
                     }
                 } catch (Exception) {
-                    // 권한이 없거나 이미 종료된 경우 무시
                     continue;
                 }
             }
@@ -197,4 +197,3 @@ namespace UPM.Core {
         }
     }
 }
-
