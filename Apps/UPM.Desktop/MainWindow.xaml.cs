@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,6 +16,9 @@ namespace UPM.Desktop {
         private readonly ApiServerClient _apiClient;
         private readonly MobileControlHttpServer _controlServer;
         private int _tickCounter = 0;
+        // 수집(GetCurrentStatus)이 아직 끝나지 않았는데 다음 틱이 도는 것을 막는 재진입 가드.
+        // 백그라운드 수집이 1초를 넘겨도 PerformanceCounter/LibreHardwareMonitor가 동시에 호출되지 않도록 보장합니다.
+        private bool _isTicking = false;
         private DashboardViewModel? _viewModel;
 
         public MainWindow() {
@@ -67,34 +71,45 @@ namespace UPM.Desktop {
         }
 
         private async void Timer_Tick(object? sender, EventArgs e) {
-            // 실시간 데이터 수집
-            var status = _monitor.GetCurrentStatus();
+            // 재진입 방지: 이전 수집이 아직 끝나지 않았다면 이번 틱은 건너뜁니다.
+            // (수집 안에 CPU 500ms 샘플링이 있어 1초를 넘길 수 있으므로 겹침을 막습니다.)
+            if (_isTicking) return;
+            _isTicking = true;
 
-            // ViewModel 업데이트 (게이지 수치 · 호 방향 색 조각)
-            if (_viewModel != null) {
-                var cpu = status.CpuUsagePercent;
-                var ram = status.RamUsagePercent;
-                var gpuUsage = status.GpuUsagePercent;
-                var gpuC = status.GpuTemperatureCelsius;
+            try {
+                // 무거운 수집 작업(전체 프로세스 열거 + CPU 500ms 샘플링)을 백그라운드 스레드에서 실행합니다.
+                // 이렇게 하면 UI 스레드가 블로킹되지 않아 화면 버벅임이 사라집니다.
+                // await 이후 코드는 다시 UI 스레드에서 실행되므로 아래 UI 갱신은 안전합니다.
+                var status = await Task.Run(() => _monitor.GetCurrentStatus());
 
-                _viewModel.ApplyCpuGauge(cpu);
-                _viewModel.ApplyRamGauge(ram);
-                _viewModel.ApplyGpuGauge(gpuUsage, gpuC);
+                // ViewModel 업데이트 (게이지 수치 · 호 방향 색 조각)
+                if (_viewModel != null) {
+                    var cpu = status.CpuUsagePercent;
+                    var ram = status.RamUsagePercent;
+                    var gpuUsage = status.GpuUsagePercent;
+                    var gpuC = status.GpuTemperatureCelsius;
 
-                ApplyGaugeHeatDots(cpu, ram, gpuUsage);
-            }
+                    _viewModel.ApplyCpuGauge(cpu);
+                    _viewModel.ApplyRamGauge(ram);
+                    _viewModel.ApplyGpuGauge(gpuUsage, gpuC);
 
-            TopProcessItems.ItemsSource = status.TopProcesses;
-
-            // 5초마다 서버로 상태 정보 전송
-            _tickCounter++;
-            if (_tickCounter >= 5) {
-                _tickCounter = 0;
-                try {
-                    await _apiClient.SendSystemStatusAsync(status);
-                } catch {
-                    // 서버 연결 실패 시 무시
+                    ApplyGaugeHeatDots(cpu, ram, gpuUsage);
                 }
+
+                TopProcessItems.ItemsSource = status.TopProcesses;
+
+                // 5초마다 서버로 상태 정보 전송
+                _tickCounter++;
+                if (_tickCounter >= 5) {
+                    _tickCounter = 0;
+                    try {
+                        await _apiClient.SendSystemStatusAsync(status);
+                    } catch {
+                        // 서버 연결 실패 시 무시
+                    }
+                }
+            } finally {
+                _isTicking = false;
             }
         }
 
@@ -140,18 +155,42 @@ namespace UPM.Desktop {
             }), DispatcherPriority.Background);
         }
 
-        private void BoostButton_Click(object sender, RoutedEventArgs e) {
+        private async void BoostButton_Click(object sender, RoutedEventArgs e) {
             BoostButton.IsEnabled = false;
             BoostButtonLabel.Text = "최적화 중…";
             BoostButtonIcon.Visibility = Visibility.Collapsed;
 
-            int count = _monitor.OptimizeSystem();
+            try {
+                // 1. 현재 상태(머신 ID · 프로세스 목록)를 수집해 서버에 최적화 분석을 요청
+                var status = _monitor.GetCurrentStatus();
+                var machineId = status.MachineId ?? Environment.MachineName;
 
-            MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                var killList = await _apiClient.RequestOptimizationAsync(machineId, status.TopProcesses);
 
-            BoostButton.IsEnabled = true;
-            BoostButtonLabel.Text = "빠른 최적화";
-            BoostButtonIcon.Visibility = Visibility.Visible;
+                // 2. 서버 응답(killList)이 있으면 규칙 기반 종료, 없으면 기존 하드코딩 방식으로 폴백
+                int count;
+                if (killList != null && killList.Count > 0) {
+                    var killedNames = _monitor.OptimizeSystemByRules(killList);
+                    count = killedNames.Count;
+
+                    // 실제 종료된 목록을 서버에 보고 (이력 저장용). 실패해도 앱은 계속 진행됩니다.
+                    await _apiClient.ReportKilledProcessesAsync(machineId, killedNames);
+                } else {
+                    count = _monitor.OptimizeSystem();
+                }
+
+                // 3. 종료된 개수를 표시
+                MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+            } catch (Exception ex) {
+                // 서버 통신 등 예외 발생 시 기존 방식으로 폴백
+                System.Diagnostics.Debug.WriteLine($"[UPM] 최적화 분석 실패, 폴백 실행: {ex.Message}");
+                int count = _monitor.OptimizeSystem();
+                MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+            } finally {
+                BoostButton.IsEnabled = true;
+                BoostButtonLabel.Text = "빠른 최적화";
+                BoostButtonIcon.Visibility = Visibility.Visible;
+            }
         }
 
         protected override void OnClosed(EventArgs e) {

@@ -26,6 +26,15 @@ namespace UPM.Models {
 
         [JsonPropertyName("isSystemCritical")]
         public bool IsSystemCritical { get; set; }
+
+        [JsonPropertyName("hasVisibleWindow")]
+        public bool HasVisibleWindow { get; set; }
+
+        [JsonPropertyName("cpuPercent")]
+        public double CpuPercent { get; set; }
+
+        [JsonPropertyName("isCurrentUserOwned")]
+        public bool IsCurrentUserOwned { get; set; }
     }
 
     /// <summary>
