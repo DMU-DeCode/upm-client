@@ -16,6 +16,7 @@ namespace UPM.Desktop {
         private readonly MobileControlHttpServer _controlServer;
         private int _tickCounter = 0;
         private DashboardViewModel? _viewModel;
+        private readonly List<string> _userWhiteList = new();
 
         public MainWindow() {
             InitializeComponent();
@@ -47,6 +48,7 @@ namespace UPM.Desktop {
 
         private void MainWindow_OnLoaded(object sender, RoutedEventArgs e) {
             RefreshWindowHeightToContent();
+            LoadUserExceptions();
         }
 
         private void LoadHardwareSpecs() {
@@ -140,20 +142,81 @@ namespace UPM.Desktop {
             }), DispatcherPriority.Background);
         }
 
-        private void BoostButton_Click(object sender, RoutedEventArgs e) {
+        private async void BoostButton_Click(object sender, RoutedEventArgs e) {
             BoostButton.IsEnabled = false;
             BoostButtonLabel.Text = "최적화 중…";
             BoostButtonIcon.Visibility = Visibility.Collapsed;
 
-            int count = _monitor.OptimizeSystem();
+            try {
+                // 서버에서 블랙리스트 가져오기
+                var rules = await _apiClient.GetOptimizationRulesAsync();
+                var blackList = rules?.BlackList ?? new List<string>();
 
-            MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            BoostButton.IsEnabled = true;
-            BoostButtonLabel.Text = "빠른 최적화";
-            BoostButtonIcon.Visibility = Visibility.Visible;
+                // 화이트리스트 제외 후 정리
+                int count = _monitor.OptimizeSystem(blackList, _userWhiteList);
+                MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", 
+                                "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+            } catch {
+                MessageBox.Show("최적화 중 오류가 발생했습니다.", "UPM");
+            } finally {
+                BoostButton.IsEnabled = true;
+                BoostButtonLabel.Text = "빠른 최적화";
+                BoostButtonIcon.Visibility = Visibility.Visible;
+            }
         }
 
+        // 화이트리스트 추가 버튼
+        private async void WhitelistAddButton_Click(object sender, RoutedEventArgs e) {
+            var name = WhitelistInputBox.Text.Trim();
+            if (string.IsNullOrEmpty(name)) return;
+
+            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                name = name[..^4];
+
+            if (_userWhiteList.Contains(name, StringComparer.OrdinalIgnoreCase)) {
+                MessageBox.Show("이미 추가된 프로세스입니다.", "UPM");
+                return;
+            }
+
+            _userWhiteList.Add(name);
+            WhitelistItems.ItemsSource = null;
+            WhitelistItems.ItemsSource = _userWhiteList;
+            WhitelistInputBox.Text = "";
+
+            try {
+                await _apiClient.UpdateExceptionAsync(Environment.MachineName, name, "add");
+            } catch { }
+        }
+
+        // 엔터키로도 추가 가능
+        private void WhitelistInputBox_KeyDown(object sender, KeyEventArgs e) {
+            if (e.Key == Key.Enter)
+                WhitelistAddButton_Click(sender, e);
+        }
+
+        // 화이트리스트 삭제 버튼
+        private async void WhitelistRemoveButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is Button btn && btn.Tag is string name) {
+                _userWhiteList.Remove(name);
+                WhitelistItems.ItemsSource = null;
+                WhitelistItems.ItemsSource = _userWhiteList;
+
+                try {
+                    await _apiClient.UpdateExceptionAsync(Environment.MachineName, name, "remove");
+                } catch { }
+            }
+        }
+
+        // 앱 시작 시 서버에서 기존 화이트리스트 불러오기
+        private async void LoadUserExceptions() {
+            try {
+                var exceptions = await _apiClient.GetExceptionsAsync(Environment.MachineName);
+                _userWhiteList.AddRange(exceptions);
+                WhitelistItems.ItemsSource = null;
+                WhitelistItems.ItemsSource = _userWhiteList;
+            } catch { }
+        }
+        
         protected override void OnClosed(EventArgs e) {
             _timer.Stop();
             _controlServer.Dispose();
