@@ -233,6 +233,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- 헤더: UPM · Universal PC Manager | 빠른 최적화 -->
@@ -616,5 +617,88 @@
                 </Grid>
             </Grid>
         </Border>
+        <Border Grid.Row="3" Style="{StaticResource PanelBorder}" Margin="0,10,0,0" Padding="18">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 헤더 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72E;" FontSize="18"
+                            Foreground="{StaticResource Brush.IconTint}" 
+                            VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel>
+                        <TextBlock Text="최적화 예외 목록 (화이트리스트)" 
+                                Style="{StaticResource Text.SectionTitle}"/>
+                        <TextBlock Text="최적화 시 종료하지 않을 프로그램을 등록하세요" 
+                                Style="{StaticResource Text.SectionSubtitle}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 입력창 + 추가 버튼 -->
+                <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="{StaticResource Brush.PanelBgElevated}"
+                            BorderBrush="{StaticResource Brush.PanelBorder}"
+                            BorderThickness="1" CornerRadius="8" Padding="10,0" Margin="0,0,8,0">
+                        <TextBox x:Name="WhitelistInputBox"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Foreground="{StaticResource Brush.TextPrimary}"
+                                CaretBrush="{StaticResource Brush.TextPrimary}"
+                                FontSize="12"
+                                Height="36"
+                                VerticalContentAlignment="Center"
+                                PlaceholderText="프로세스 이름 입력 (예: chrome, discord)"
+                                KeyDown="WhitelistInputBox_KeyDown"/>
+                    </Border>
+                    <Button Grid.Column="1" x:Name="WhitelistAddButton"
+                            Content="추가" 
+                            Style="{StaticResource PrimaryButton}"
+                            MinWidth="64" Height="36"
+                            Click="WhitelistAddButton_Click"/>
+                </Grid>
+
+                <!-- 화이트리스트 목록 -->
+                <Border Grid.Row="2" Background="{StaticResource Brush.PanelBgElevated}"
+                        CornerRadius="8" Padding="8" MinHeight="48">
+                    <ItemsControl x:Name="WhitelistItems">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Brush.PanelBg}"
+                                        BorderBrush="{StaticResource Brush.Accent}"
+                                        BorderThickness="1" CornerRadius="6"
+                                        Padding="8,4" Margin="4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding}" 
+                                                Foreground="{StaticResource Brush.TextPrimary}"
+                                                FontSize="11" VerticalAlignment="Center"/>
+                                        <Button Content="✕" 
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Foreground="{StaticResource Brush.TextMuted}"
+                                                FontSize="10" Margin="6,0,0,0"
+                                                Cursor="Hand"
+                                                Tag="{Binding}"
+                                                Click="WhitelistRemoveButton_Click"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </Grid>
+        </Border>  
     </Grid>
 </Window>
