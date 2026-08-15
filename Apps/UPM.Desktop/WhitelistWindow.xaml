@@ -1,0 +1,276 @@
+<Window x:Class="UPM.Desktop.WhitelistWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:m="clr-namespace:UPM.Models;assembly=UPM.Models"
+        xmlns:conv="clr-namespace:UPM.Desktop.Converters"
+        mc:Ignorable="d"
+        Title="화이트리스트 관리"
+        Width="720" Height="560"
+        MinWidth="640" MinHeight="480"
+        Background="#17171A"
+        FontFamily="Segoe UI Variable, Segoe UI"
+        WindowStartupLocation="CenterOwner"
+        Loaded="WhitelistWindow_OnLoaded">
+
+    <!-- App.xaml에 공용 리소스가 없어 MainWindow.xaml의 다크 테마 리소스 중 필요한 것만 복사해 사용합니다. -->
+    <Window.Resources>
+        <conv:ExePathToIconConverter x:Key="ExePathToIconConverter"/>
+
+        <SolidColorBrush x:Key="Brush.PanelBg" Color="#232326"/>
+        <SolidColorBrush x:Key="Brush.PanelBgElevated" Color="#2C2C30"/>
+        <SolidColorBrush x:Key="Brush.PanelBorder" Color="#3D3D42"/>
+        <SolidColorBrush x:Key="Brush.RowStripe" Color="#1E1E22"/>
+        <SolidColorBrush x:Key="Brush.TextPrimary" Color="#F2F2F7"/>
+        <SolidColorBrush x:Key="Brush.TextSecondary" Color="#AEAEB2"/>
+        <SolidColorBrush x:Key="Brush.TextTertiary" Color="#8E8E93"/>
+        <SolidColorBrush x:Key="Brush.TextMuted" Color="#636366"/>
+        <SolidColorBrush x:Key="Brush.Accent" Color="#34C759"/>
+        <SolidColorBrush x:Key="Brush.AccentHover" Color="#40D965"/>
+        <SolidColorBrush x:Key="Brush.AccentPressed" Color="#28A745"/>
+
+        <Style x:Key="Text.SectionTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+        </Style>
+        <Style x:Key="Text.SectionSubtitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+        <Style x:Key="Text.Overline" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+        </Style>
+
+        <Style x:Key="PanelBorder" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Brush.PanelBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" CornerRadius="10" Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.35" Color="#000000"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentPressed}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 보조 버튼: 화이트리스트 이동(추가/제거)용. PrimaryButton과 동일 톤의 어두운 서피스. -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Background" Value="{StaticResource Brush.PanelBgElevated}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" CornerRadius="10" Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{StaticResource Brush.PanelBorder}" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#38383C"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#353539"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Background" Value="{StaticResource Brush.PanelBgElevated}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8" Padding="10,8">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 실행 중인 프로세스 목록: 이름 + 아이콘 -->
+        <Style x:Key="ListBoxDark" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+        <Style x:Key="ListItemDark" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="RowBg" Background="Transparent" CornerRadius="6" Padding="8,7" SnapsToDevicePixels="True">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                                <Setter TargetName="RowBg" Property="Background" Value="{StaticResource Brush.RowStripe}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RowBg" Property="Background" Value="#38383C"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="RowBg" Property="Background" Value="#353539"/>
+                                <Setter TargetName="RowBg" Property="BorderBrush" Value="{StaticResource Brush.Accent}"/>
+                                <Setter TargetName="RowBg" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 헤더 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14" VerticalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71C;" FontSize="20"
+                       Foreground="#64D2FF" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="화이트리스트 (종료 제외 목록)" Style="{StaticResource Text.SectionTitle}" FontSize="16"/>
+                <TextBlock Text="여기에 등록된 프로세스는 빠른 최적화 시 종료 대상에서 제외됩니다" Style="{StaticResource Text.SectionSubtitle}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 직접 입력 -->
+        <Border Grid.Row="1" Style="{StaticResource PanelBorder}" Padding="12" Margin="0,0,0,12">
+            <DockPanel LastChildFill="True">
+                <Button x:Name="AddManualButton" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}"
+                        MinWidth="88" Margin="10,0,0,0" Content="추가" Click="AddManualButton_Click"/>
+                <TextBox x:Name="ManualInput" Style="{StaticResource DarkTextBox}"
+                         VerticalAlignment="Center" KeyDown="ManualInput_OnKeyDown"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 목록 이동 -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 왼쪽: 실행 중인 프로세스 -->
+            <Border Grid.Column="0" Style="{StaticResource PanelBorder}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="실행 중인 프로세스" Style="{StaticResource Text.Overline}" Margin="2,0,0,8"/>
+                    <ListBox x:Name="RunningProcessList" Style="{StaticResource ListBoxDark}"
+                             ItemContainerStyle="{StaticResource ListItemDark}" AlternationCount="2">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type m:ProcessInfoModel}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="26"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Image Grid.Column="0" Width="20" Height="20" VerticalAlignment="Center"
+                                           Source="{Binding ExecutablePath, Converter={StaticResource ExePathToIconConverter}}"
+                                           SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ProcessName}" Margin="8,0,0,0"
+                                               Foreground="{StaticResource Brush.TextPrimary}" FontSize="12"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- 가운데: 이동 버튼 -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
+                <Button x:Name="AddSelectedButton" Style="{StaticResource SecondaryButton}"
+                        MinWidth="96" Content="추가 →" Click="AddSelectedButton_Click"/>
+                <Button x:Name="RemoveSelectedButton" Style="{StaticResource SecondaryButton}"
+                        MinWidth="96" Margin="0,10,0,0" Content="← 제거" Click="RemoveSelectedButton_Click"/>
+            </StackPanel>
+
+            <!-- 오른쪽: 화이트리스트 -->
+            <Border Grid.Column="2" Style="{StaticResource PanelBorder}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="화이트리스트" Style="{StaticResource Text.Overline}" Margin="2,0,0,8"/>
+                    <TextBlock x:Name="WhitelistEmptyHint" DockPanel.Dock="Bottom"
+                               Text="아직 등록된 항목이 없습니다" Style="{StaticResource Text.SectionSubtitle}"
+                               Margin="2,6,0,0" Visibility="Collapsed"/>
+                    <ListBox x:Name="WhitelistList" Style="{StaticResource ListBoxDark}"
+                             ItemContainerStyle="{StaticResource ListItemDark}" AlternationCount="2">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="{StaticResource Brush.TextPrimary}" FontSize="12"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

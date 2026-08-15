@@ -30,8 +30,11 @@ public class ApiServerClient : IDisposable {
     /// 최적화 분석을 <c>POST /api/v1/optimization/analyze</c> 로 요청합니다.
     /// machineId와 현재 프로세스 목록을 전송하고, 종료 대상 프로세스 목록(killList)을 반환합니다.
     /// </summary>
-    /// <returns>종료 대상 프로세스 이름 목록. 실패 시 빈 리스트.</returns>
-    public async Task<List<string>> RequestOptimizationAsync(string machineId, List<ProcessInfoModel> topProcesses) {
+    /// <returns>
+    /// 정상 응답이면 종료 대상 프로세스 이름 목록(정리할 대상이 없으면 빈 리스트).
+    /// 서버 통신 자체가 실패하면 <c>null</c>. 호출자는 이 둘을 구분해 폴백 여부를 결정합니다.
+    /// </returns>
+    public async Task<List<string>?> RequestOptimizationAsync(string machineId, List<ProcessInfoModel> topProcesses) {
         try {
             var request = new OptimizationRequest {
                 MachineId = machineId,
@@ -43,8 +46,9 @@ public class ApiServerClient : IDisposable {
             var result = await response.Content.ReadFromJsonAsync<OptimizationResponse>();
             return result?.KillList ?? new List<string>();
         } catch (Exception ex) {
+            // 통신 실패는 '정리할 대상이 없음(빈 리스트)'과 구분하기 위해 null을 반환합니다.
             Console.WriteLine($"[UPM] 최적화 분석 요청 실패: {ex.Message}");
-            return new List<string>();
+            return null;
         }
     }
 
@@ -61,6 +65,70 @@ public class ApiServerClient : IDisposable {
             await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/optimization/report", request);
         } catch (Exception ex) {
             Console.WriteLine($"[UPM] 종료 프로세스 보고 실패: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 해당 머신의 예외(제외) 프로세스 목록을 <c>GET /api/v1/optimization/exceptions</c> 로 조회합니다.
+    /// 실패해도 앱 동작에 영향을 주지 않도록 예외를 삼키고 로깅만 합니다.
+    /// </summary>
+    /// <returns>예외 프로세스 이름 목록. 실패 시 빈 리스트.</returns>
+    public async Task<List<string>> GetExceptionsAsync(string machineId) {
+        try {
+            var response = await _httpClient.GetAsync($"{_baseUrl}/api/v1/optimization/exceptions?machineId={machineId}");
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<ExceptionsResponse>();
+            return result?.Exceptions ?? new List<string>();
+        } catch (Exception ex) {
+            Console.WriteLine($"[UPM] 예외 목록 조회 실패: {ex.Message}");
+            return new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// 예외(제외) 프로세스를 <c>POST /api/v1/optimization/exceptions</c> (action=add)로 추가합니다.
+    /// 실패해도 앱 동작에 영향을 주지 않도록 예외를 삼키고 로깅만 합니다.
+    /// </summary>
+    /// <returns>갱신된 전체 예외 프로세스 이름 목록. 실패 시 빈 리스트.</returns>
+    public async Task<List<string>> AddExceptionAsync(string machineId, string processName) {
+        try {
+            var request = new ExceptionMutationRequest {
+                MachineId = machineId,
+                ProcessName = processName,
+                Action = "add",
+            };
+            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/optimization/exceptions", request);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<ExceptionsResponse>();
+            return result?.Exceptions ?? new List<string>();
+        } catch (Exception ex) {
+            Console.WriteLine($"[UPM] 예외 추가 실패: {ex.Message}");
+            return new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// 예외(제외) 프로세스를 <c>POST /api/v1/optimization/exceptions</c> (action=remove)로 제거합니다.
+    /// 실패해도 앱 동작에 영향을 주지 않도록 예외를 삼키고 로깅만 합니다.
+    /// </summary>
+    /// <returns>갱신된 전체 예외 프로세스 이름 목록. 실패 시 빈 리스트.</returns>
+    public async Task<List<string>> RemoveExceptionAsync(string machineId, string processName) {
+        try {
+            var request = new ExceptionMutationRequest {
+                MachineId = machineId,
+                ProcessName = processName,
+                Action = "remove",
+            };
+            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/optimization/exceptions", request);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<ExceptionsResponse>();
+            return result?.Exceptions ?? new List<string>();
+        } catch (Exception ex) {
+            Console.WriteLine($"[UPM] 예외 제거 실패: {ex.Message}");
+            return new List<string>();
         }
     }
 
@@ -86,6 +154,27 @@ public class ApiServerClient : IDisposable {
 
         [JsonPropertyName("killedProcesses")]
         public List<string> KilledProcesses { get; set; } = new();
+    }
+
+    /// <summary>예외 목록 조회·변경 응답. <c>{ "machineId": ..., "exceptions": [...] }</c> 형식.</summary>
+    private class ExceptionsResponse {
+        [JsonPropertyName("machineId")]
+        public string MachineId { get; set; } = "";
+
+        [JsonPropertyName("exceptions")]
+        public List<string> Exceptions { get; set; } = new();
+    }
+
+    /// <summary>예외 추가·제거 요청 페이로드. <c>{ "machineId": ..., "processName": ..., "action": "add"|"remove" }</c> 형식.</summary>
+    private class ExceptionMutationRequest {
+        [JsonPropertyName("machineId")]
+        public string MachineId { get; set; } = "";
+
+        [JsonPropertyName("processName")]
+        public string ProcessName { get; set; } = "";
+
+        [JsonPropertyName("action")]
+        public string Action { get; set; } = "";
     }
 
     public void Dispose() => _httpClient.Dispose();

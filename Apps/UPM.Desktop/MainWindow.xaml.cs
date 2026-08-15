@@ -165,31 +165,60 @@ namespace UPM.Desktop {
                 var status = _monitor.GetCurrentStatus();
                 var machineId = status.MachineId ?? Environment.MachineName;
 
+                // killList: null = 서버 통신 실패, 빈 리스트 = 정상 응답이지만 정리 대상 없음
                 var killList = await _apiClient.RequestOptimizationAsync(machineId, status.TopProcesses);
 
-                // 2. 서버 응답(killList)이 있으면 규칙 기반 종료, 없으면 기존 하드코딩 방식으로 폴백
-                int count;
-                if (killList != null && killList.Count > 0) {
-                    var killedNames = _monitor.OptimizeSystemByRules(killList);
-                    count = killedNames.Count;
-
-                    // 실제 종료된 목록을 서버에 보고 (이력 저장용). 실패해도 앱은 계속 진행됩니다.
-                    await _apiClient.ReportKilledProcessesAsync(machineId, killedNames);
-                } else {
-                    count = _monitor.OptimizeSystem();
+                if (killList == null) {
+                    // 2-a. 서버 통신 자체가 실패한 경우에만 기존 하드코딩 방식으로 폴백
+                    System.Diagnostics.Debug.WriteLine("[UPM] 최적화 분석 통신 실패 → 로컬 폴백 실행");
+                    int fallbackCount = _monitor.OptimizeSystem();
+                    MessageBox.Show($"서버에 연결하지 못해 로컬 규칙으로 {fallbackCount}개의 프로세스를 정리했습니다.",
+                        "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
                 }
 
-                // 3. 종료된 개수를 표시
-                MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (killList.Count == 0) {
+                    // 2-b. 정상 응답인데 종료 대상이 없으면 폴백하지 않고 그대로 알립니다.
+                    MessageBox.Show("정리할 프로세스가 없습니다.", "최적화", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // 2-c. 서버가 내려준 killList를 규칙 기반으로 종료
+                var killedNames = _monitor.OptimizeSystemByRules(killList);
+
+                // 3. 실제 종료된 목록을 서버에 보고 (이력 저장용). 실패해도 앱은 계속 진행됩니다.
+                await _apiClient.ReportKilledProcessesAsync(machineId, killedNames);
+
+                MessageBox.Show($"{killedNames.Count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
             } catch (Exception ex) {
-                // 서버 통신 등 예외 발생 시 기존 방식으로 폴백
-                System.Diagnostics.Debug.WriteLine($"[UPM] 최적화 분석 실패, 폴백 실행: {ex.Message}");
+                // 통신 외 예기치 못한 오류 발생 시에도 앱이 멈추지 않도록 로컬 방식으로 폴백
+                System.Diagnostics.Debug.WriteLine($"[UPM] 최적화 처리 중 예외, 폴백 실행: {ex.Message}");
                 int count = _monitor.OptimizeSystem();
                 MessageBox.Show($"{count}개의 불필요한 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
             } finally {
                 BoostButton.IsEnabled = true;
                 BoostButtonLabel.Text = "빠른 최적화";
                 BoostButtonIcon.Visibility = Visibility.Visible;
+            }
+        }
+
+        private async void WhitelistButton_Click(object sender, RoutedEventArgs e) {
+            WhitelistButton.IsEnabled = false;
+            try {
+                // 프로세스 목록 수집(GetCurrentStatus)은 CPU 500ms 샘플링 등으로 무거우므로
+                // UI 스레드 블로킹을 피하기 위해 백그라운드 스레드에서 실행합니다.
+                var status = await Task.Run(() => _monitor.GetCurrentStatus());
+                var machineId = status.MachineId ?? Environment.MachineName;
+
+                var window = new WhitelistWindow(_apiClient, machineId, status.TopProcesses) {
+                    Owner = this
+                };
+                window.ShowDialog();
+            } catch (Exception ex) {
+                MessageBox.Show($"화이트리스트 창을 열지 못했습니다.\n{ex.Message}", "UPM",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            } finally {
+                WhitelistButton.IsEnabled = true;
             }
         }
 

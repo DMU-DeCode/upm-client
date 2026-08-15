@@ -129,7 +129,7 @@ namespace UPM.Core {
                 // 각 프로세스 WS ÷ (현재 사용 중인 물리 RAM 바이트). 설치 전체 RAM 기준이 아님.
                 status.TopProcesses = rows
                     .OrderByDescending(x => x.MemoryWorkingSetBytes)
-                    .Take(8)
+                    .Take(40)
                     .Select(x => {
                         if (usedRamBytes > 0)
                             x.MemoryPercentOfUsedRam = Math.Min(100, Math.Round(x.MemoryWorkingSetBytes / usedRamBytes * 100.0, 1));
@@ -137,8 +137,9 @@ namespace UPM.Core {
                     })
                     .ToList();
 
-                // 성능 최적화: 전체가 아닌 상위 N개(TopProcesses)에 대해서만 CPU 사용률을 측정합니다.
-                MeasureCpuUsage(status.TopProcesses);
+                // 성능 최적화: CPU 측정은 500ms 샘플링이라 40개 전부 측정하면 UI가 느려집니다.
+                // 최적화용으로 목록은 40개까지 유지하되, CPU 사용률은 메모리 상위 8개에 대해서만 측정합니다.
+                MeasureCpuUsage(status.TopProcesses.Take(8).ToList());
             } catch {
                 status.TopProcesses = new List<ProcessInfoModel>();
             }
@@ -219,13 +220,14 @@ namespace UPM.Core {
         private static readonly HashSet<string> _protectedProcessNames =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
                 // Visual Studio / 빌드 툴체인
-                "code", "devenv", "msbuild", "servicehub", "servicehub.host",
-                "vbcscompiler", "perfwatson2",
+                "code", "devenv", "msbuild", "servicehub", "vbcscompiler", "perfwatson2",
                 // 런타임 / 인터프리터 / 서버
                 "python", "pythonw", "uvicorn", "node", "dotnet",
                 // 셸 / 터미널 / VCS
-                "cmd", "powershell", "pwsh", "conhost", "git",
-                _selfProcessName, // 이 UPM 프로그램 자기 자신
+                "cmd", "powershell", "pwsh", "conhost", "windowsterminal", "git", "ssh",
+                // 시스템 필수 (서버 WHITELIST와 동일)
+                "svchost", "explorer", "System", "csrss", "lsass", "winlogon",
+                _selfProcessName, // 이 UPM 프로그램 자기 자신 (서버는 클라 자신의 이름을 알 수 없어 클라에서만 보호)
             };
 
         /// <summary>

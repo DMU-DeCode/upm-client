@@ -252,6 +252,15 @@
                     <TextBlock x:Name="BoostButtonLabel" Text="빠른 최적화" Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
+            <Button x:Name="WhitelistButton" DockPanel.Dock="Right" VerticalAlignment="Center"
+                    Style="{StaticResource PrimaryButton}" MinWidth="148" Margin="0,0,10,0"
+                    Click="WhitelistButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71D;" FontSize="15"
+                               Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="화이트리스트" Foreground="White" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </DockPanel>
 
         <!-- 실시간 게이지 -->
