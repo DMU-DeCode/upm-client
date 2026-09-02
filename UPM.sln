@@ -1,0 +1,66 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37027.9 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UPM.Desktop", "Apps\UPM.Desktop\UPM.Desktop.csproj", "{94BCCA21-04D1-475A-B1FF-7E1A7C7DA4F9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F} = {0717FD09-52B4-4128-88EE-44FEA8C76B5F}
+		{A63047F8-6089-4CC5-BA90-827C7C09A778} = {A63047F8-6089-4CC5-BA90-827C7C09A778}
+		{AF11484B-0244-4BA5-9873-12B53DC4EC69} = {AF11484B-0244-4BA5-9873-12B53DC4EC69}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UPM.Core", "Libraries\UPM.Core\UPM.Core.csproj", "{A63047F8-6089-4CC5-BA90-827C7C09A778}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F} = {0717FD09-52B4-4128-88EE-44FEA8C76B5F}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UPM.Communication", "Libraries\UPM.Communication\UPM.Communication.csproj", "{AF11484B-0244-4BA5-9873-12B53DC4EC69}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F} = {0717FD09-52B4-4128-88EE-44FEA8C76B5F}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UPM.Models", "Shared\UPM.Models\UPM.Models.csproj", "{0717FD09-52B4-4128-88EE-44FEA8C76B5F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "01_Apps", "01_Apps", "{C8D5274F-AC00-46C7-1F8D-E88E81087A52}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "02_Libraries", "02_Libraries", "{35828082-19AF-4B66-B7A6-137C27B12568}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "03_Shared", "03_Shared", "{81F5634A-3205-475D-8CB3-DC0EAF4B82B8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{94BCCA21-04D1-475A-B1FF-7E1A7C7DA4F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94BCCA21-04D1-475A-B1FF-7E1A7C7DA4F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94BCCA21-04D1-475A-B1FF-7E1A7C7DA4F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94BCCA21-04D1-475A-B1FF-7E1A7C7DA4F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A63047F8-6089-4CC5-BA90-827C7C09A778}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A63047F8-6089-4CC5-BA90-827C7C09A778}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A63047F8-6089-4CC5-BA90-827C7C09A778}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A63047F8-6089-4CC5-BA90-827C7C09A778}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF11484B-0244-4BA5-9873-12B53DC4EC69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF11484B-0244-4BA5-9873-12B53DC4EC69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF11484B-0244-4BA5-9873-12B53DC4EC69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF11484B-0244-4BA5-9873-12B53DC4EC69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{94BCCA21-04D1-475A-B1FF-7E1A7C7DA4F9} = {C8D5274F-AC00-46C7-1F8D-E88E81087A52}
+		{A63047F8-6089-4CC5-BA90-827C7C09A778} = {35828082-19AF-4B66-B7A6-137C27B12568}
+		{AF11484B-0244-4BA5-9873-12B53DC4EC69} = {35828082-19AF-4B66-B7A6-137C27B12568}
+		{0717FD09-52B4-4128-88EE-44FEA8C76B5F} = {81F5634A-3205-475D-8CB3-DC0EAF4B82B8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {957BDC46-9719-476B-94E1-497C7D3FDD82}
+	EndGlobalSection
+EndGlobal

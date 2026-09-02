@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- net8.0-windows → windows7.0 폴백 시 NU1701 다발; Win10 1809+ 명시 + LiveCharts 전이 경고 억제 -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.2" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libraries\UPM.Communication\UPM.Communication.csproj" />
+    <ProjectReference Include="..\..\Libraries\UPM.Core\UPM.Core.csproj" />
+    <ProjectReference Include="..\..\Shared\UPM.Models\UPM.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\GpuTemperatureIcon.png" />
+  </ItemGroup>
+
+</Project>
