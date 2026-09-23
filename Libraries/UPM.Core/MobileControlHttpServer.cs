@@ -36,7 +36,7 @@ public sealed class MobileControlHttpServer : IDisposable {
         while (!cancellationToken.IsCancellationRequested) {
             try {
                 var context = await _listener.GetContextAsync().WaitAsync(cancellationToken);
-                _ = Task.Run(() => HandleRequestAsync(context), cancellationToken);
+                _ = Task.Run(() => HandleRequestAsync(context, cancellationToken), cancellationToken);
             } catch (OperationCanceledException) {
                 break;
             } catch (HttpListenerException) when (cancellationToken.IsCancellationRequested) {
@@ -49,11 +49,17 @@ public sealed class MobileControlHttpServer : IDisposable {
         }
     }
 
-    private async Task HandleRequestAsync(HttpListenerContext context) {
+    private async Task HandleRequestAsync(HttpListenerContext context, CancellationToken cancellationToken) {
         var request = context.Request;
         var response = context.Response;
 
         try {
+            // 취소된 경우 응답 없이 조용히 종료
+            if (cancellationToken.IsCancellationRequested) {
+                response.Abort();
+                return;
+            }
+
             var path = request.Url?.AbsolutePath.TrimEnd('/') ?? string.Empty;
 
             if (request.HttpMethod == "POST" &&
@@ -81,12 +87,16 @@ public sealed class MobileControlHttpServer : IDisposable {
             response.StatusCode = (int)HttpStatusCode.NotFound;
         } catch (Exception ex) {
             Debug.WriteLine($"[UPM] 제어 요청 처리 실패: {ex.Message}");
-            await WriteJsonAsync(response, HttpStatusCode.InternalServerError, new {
-                status = "error",
-                message = ex.Message,
-            });
+            try {
+                await WriteJsonAsync(response, HttpStatusCode.InternalServerError, new {
+                    status = "error",
+                    message = ex.Message,
+                });
+            } catch {
+                // 응답 전송 자체가 실패(스트림 파괴 등)한 경우 무시
+            }
         } finally {
-            response.Close();
+            try { response.Close(); } catch { /* 이미 닫혔거나 파괴된 경우 무시 */ }
         }
     }
 
@@ -100,10 +110,26 @@ public sealed class MobileControlHttpServer : IDisposable {
     }
 
     public void Dispose() {
+        // 1. 먼저 루프를 취소하여 새 요청 수락 중단
         _cts.Cancel();
-        if (_listener.IsListening)
-            _listener.Stop();
-        _listener.Close();
+
+        // 2. 블로킹된 GetContextAsync 를 해제하기 위해 Stop() 호출
+        try {
+            if (_listener.IsListening)
+                _listener.Stop();
+        } catch (Exception ex) {
+            Debug.WriteLine($"[UPM] 서버 Stop 실패: {ex.Message}");
+        }
+
+        // 3. 리스닝 루프가 완전히 종료될 때까지 대기 (최대 2초)
+        try {
+            _listenTask?.Wait(TimeSpan.FromSeconds(2));
+        } catch {
+            // AggregateException, TaskCanceledException 등 무시
+        }
+
+        // 4. 리소스 해제
+        try { _listener.Close(); } catch { /* ignore */ }
         _cts.Dispose();
     }
 }

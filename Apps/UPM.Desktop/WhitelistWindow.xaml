@@ -7,8 +7,8 @@
         xmlns:conv="clr-namespace:UPM.Desktop.Converters"
         mc:Ignorable="d"
         Title="화이트리스트 관리"
-        Width="720" Height="560"
-        MinWidth="640" MinHeight="480"
+        Width="760" Height="580"
+        MinWidth="660" MinHeight="500"
         Background="#17171A"
         FontFamily="Segoe UI Variable, Segoe UI"
         WindowStartupLocation="CenterOwner"
@@ -195,6 +195,51 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 탭 컨트롤 다크 스타일 -->
+        <Style x:Key="DarkTabControl" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <DockPanel>
+                            <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Margin="0,0,0,8"/>
+                            <ContentPresenter ContentSource="SelectedContent"/>
+                        </DockPanel>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkTabItem" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                Background="Transparent">
+                            <TextBlock x:Name="TabText" Text="{TemplateBinding Header}"
+                                       Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#2C2C30"/>
+                                <Setter TargetName="TabText" Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#28282C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="22">
@@ -205,14 +250,30 @@
         </Grid.RowDefinitions>
 
         <!-- 헤더 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14" VerticalAlignment="Center">
-            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71C;" FontSize="20"
-                       Foreground="#64D2FF" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="화이트리스트 (종료 제외 목록)" Style="{StaticResource Text.SectionTitle}" FontSize="16"/>
-                <TextBlock Text="여기에 등록된 프로세스는 빠른 최적화 시 종료 대상에서 제외됩니다" Style="{StaticResource Text.SectionSubtitle}"/>
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 좌측: 타이틀 -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71C;" FontSize="20"
+                           Foreground="#64D2FF" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="화이트리스트 (종료 제외 목록)" Style="{StaticResource Text.SectionTitle}" FontSize="16"/>
+                    <TextBlock Text="여기에 등록된 프로세스는 빠른 최적화 시 종료 대상에서 제외됩니다" Style="{StaticResource Text.SectionSubtitle}"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+
+            <!-- 우측: 적용 버튼 -->
+            <Button x:Name="ApplyButton" Grid.Column="1"
+                    Style="{StaticResource PrimaryButton}"
+                    Padding="20,10"
+                    VerticalAlignment="Center"
+                    Content="✓  적용"
+                    Click="ApplyButton_Click"/>
+        </Grid>
 
         <!-- 직접 입력 -->
         <Border Grid.Row="1" Style="{StaticResource PanelBorder}" Padding="12" Margin="0,0,0,12">
@@ -232,10 +293,18 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 왼쪽: 실행 중인 프로세스 -->
-            <Border Grid.Column="0" Style="{StaticResource PanelBorder}">
+            <!-- 왼쪽: 실행 중인 프로세스 (탭으로 분리) -->
+            <Border Grid.Column="0" Style="{StaticResource PanelBorder}" Padding="12">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="실행 중인 프로세스" Style="{StaticResource Text.Overline}" Margin="2,0,0,8"/>
+                    <!-- 탭 헤더 -->
+                    <TabControl x:Name="ProcessTabControl" DockPanel.Dock="Top"
+                                Style="{StaticResource DarkTabControl}"
+                                SelectionChanged="ProcessTabControl_SelectionChanged">
+                        <TabItem x:Name="TabWindowed" Header="🪟  열린 윈도우" Style="{StaticResource DarkTabItem}"/>
+                        <TabItem x:Name="TabBackground" Header="⚙  백그라운드" Style="{StaticResource DarkTabItem}"/>
+                    </TabControl>
+
+                    <!-- 공유 리스트: 탭 전환 시 ItemsSource를 코드에서 교체 -->
                     <ListBox x:Name="RunningProcessList" Style="{StaticResource ListBoxDark}"
                              ItemContainerStyle="{StaticResource ListItemDark}" AlternationCount="2">
                         <ListBox.ItemTemplate>

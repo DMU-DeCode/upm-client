@@ -179,6 +179,8 @@ namespace UPM.Core {
                         _userExcludedProcesses.Add(ex);
                     }
                 }
+                // UPM 자체는 항상 보호 (껐다 켜도 유지)
+                _userExcludedProcesses.Add("UPM.Desktop");
             }
         }
 
@@ -186,15 +188,24 @@ namespace UPM.Core {
             if (string.IsNullOrWhiteSpace(processName) || IsCritical(processName))
                 return true;
 
+            bool isNowProtected;
             lock (_userExcludedProcesses) {
                 if (_userExcludedProcesses.Contains(processName)) {
                     _userExcludedProcesses.Remove(processName);
-                    return false;
+                    isNowProtected = false;
                 } else {
                     _userExcludedProcesses.Add(processName);
-                    return true;
+                    isNowProtected = true;
                 }
             }
+
+            // 영속성 보장: 인메모리 변경을 로컬 파일에 반영
+            if (isNowProtected)
+                LocalWhitelistStore.Add(processName);
+            else
+                LocalWhitelistStore.Remove(processName);
+
+            return isNowProtected;
         }
 
         public bool IsProcessProtected(string processName) {
@@ -236,6 +247,57 @@ namespace UPM.Core {
                 }
             }
             return best > 0 ? Math.Round(Math.Clamp(best, 0, 100), 1) : 0;
+        }
+
+        /// <summary>
+        /// 현재 실행 중인 모든 프로세스를 그룹화하여 반환합니다 (상위 8개 제한 없음).
+        /// 화이트리스트 창 등 전체 프로세스 목록이 필요한 곳에 사용합니다.
+        /// </summary>
+        public List<ProcessInfoModel> GetAllRunningProcesses() {
+            var rows = new List<ProcessInfoModel>();
+            foreach (var p in Process.GetProcesses()) {
+                try {
+                    if (string.IsNullOrEmpty(p.ProcessName)) continue;
+                    string? exePath = GetProcessExecutablePath(p);
+
+                    bool hasWindow = false;
+                    try { hasWindow = p.MainWindowHandle != IntPtr.Zero; } catch { /* ignore */ }
+
+                    rows.Add(new ProcessInfoModel {
+                        ProcessId = p.Id,
+                        ProcessName = p.ProcessName,
+                        MemoryWorkingSetBytes = p.WorkingSet64,
+                        ExecutablePath = exePath,
+                        IsSystemCritical = IsCritical(p.ProcessName),
+                        HasVisibleWindow = hasWindow,
+                        IsProtected = IsProcessProtected(p.ProcessName),
+                        ProcessCount = 1
+                    });
+                } catch {
+                    // 일부 시스템/보호 프로세스는 지표 읽기 실패
+                } finally {
+                    try { p.Dispose(); } catch { /* ignore */ }
+                }
+            }
+
+            // 프로세스 이름 단위 그룹화 (메모리 점유 합산 및 인스턴스 개수 집계)
+            return rows
+                .GroupBy(x => x.ProcessName, StringComparer.OrdinalIgnoreCase)
+                .Select(g => {
+                    var firstWithExe = g.FirstOrDefault(x => !string.IsNullOrEmpty(x.ExecutablePath)) ?? g.First();
+                    return new ProcessInfoModel {
+                        ProcessId = firstWithExe.ProcessId,
+                        ProcessName = g.Key,
+                        MemoryWorkingSetBytes = g.Sum(x => x.MemoryWorkingSetBytes),
+                        ExecutablePath = firstWithExe.ExecutablePath,
+                        IsSystemCritical = IsCritical(g.Key),
+                        HasVisibleWindow = g.Any(x => x.HasVisibleWindow),
+                        IsProtected = IsProcessProtected(g.Key),
+                        ProcessCount = g.Count()
+                    };
+                })
+                .OrderBy(x => x.ProcessName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         public void Dispose() {
@@ -294,12 +356,18 @@ namespace UPM.Core {
 
             if (AutoCloseMode) {
                 // 1. 서버 연동 스마트 최적화 시도
+                // serverSuccess = 서버가 정상 응답(null이 아닌 리스트)을 줬는지 여부.
+                // killList가 빈 배열이어도(종료 대상 없음) 서버 통신은 성공한 것이므로
+                // 로컬 폴백(2번)으로 떨어지지 않도록 반드시 true로 세팅해야 합니다.
                 if (apiClient != null && !string.IsNullOrEmpty(machineId) && currentProcesses != null && currentProcesses.Count > 0) {
                     try {
                         var killList = await apiClient.AnalyzeOptimizationAsync(machineId, currentProcesses);
-                        if (killList != null && killList.Count > 0) {
-                            serverSuccess = true;
+                        // null = 통신 실패/예외, 빈 리스트 = 서버 응답 성공(종료 대상 없음)
+                        if (killList != null) {
+                            serverSuccess = true; // 빈 리스트여도 서버 통신 성공으로 처리
                             foreach (var name in killList) {
+                                // 필수 시스템 프로세스 및 UPM 자체 보호 (IsCritical 포함)
+                                if (IsCritical(name)) continue;
                                 if (IsProcessProtected(name)) continue;
                                 try {
                                     foreach (var p in Process.GetProcessesByName(name)) {
@@ -310,6 +378,7 @@ namespace UPM.Core {
                                 } catch { /* ignore */ }
                             }
                         }
+                        // killList == null 이면 serverSuccess = false 유지 → 로컬 폴백
                     } catch { /* 서버 분석 실패 시 로컬 로직으로 폴백 */ }
                 }
 

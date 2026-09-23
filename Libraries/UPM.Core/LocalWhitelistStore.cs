@@ -39,7 +39,11 @@ public class LocalWhitelistStore {
     public static void Save(List<string> items) {
         try {
             Directory.CreateDirectory(_directory);
-            var json = JsonSerializer.Serialize(items ?? new List<string>(), _jsonOptions);
+            var toSave = items ?? new List<string>();
+            // UPM 자체는 항상 보호 대상에 포함
+            if (!toSave.Contains("UPM.Desktop", StringComparer.OrdinalIgnoreCase))
+                toSave = new List<string>(toSave) { "UPM.Desktop" };
+            var json = JsonSerializer.Serialize(toSave, _jsonOptions);
             File.WriteAllText(_filePath, json);
         } catch (Exception ex) {
             Debug.WriteLine($"[UPM] 로컬 화이트리스트 저장 실패: {ex.Message}");

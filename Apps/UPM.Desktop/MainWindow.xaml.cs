@@ -40,6 +40,12 @@ namespace UPM.Desktop {
 
             // 2. 초기 1회 하드웨어 사양 로드 및 서버 예외 목록 수신
             LoadHardwareSpecs();
+
+            // 로컬 화이트리스트 즉시 반영 (서버 응답 전 최적화 실행 시 보호 보장)
+            var localWhitelist = UPM.Core.LocalWhitelistStore.Load();
+            if (localWhitelist.Count > 0)
+                _monitor.SetUserExceptions(localWhitelist);
+
             _ = LoadServerExceptionsAsync();
 
             // 3. 실시간 업데이트 타이머 시작
@@ -220,7 +226,9 @@ namespace UPM.Desktop {
             BoostButtonIcon.Visibility = Visibility.Collapsed;
 
             var currentProcesses = TopProcessItems.ItemsSource as List<ProcessInfoModel>;
-            int count = await _monitor.OptimizeSystemAsync(_apiClient, _machineId, currentProcesses);
+            // 백그라운드 스레드에서 실행하여 UI 스레드 블로킹 및 앱 크래시 방지
+            int count = await System.Threading.Tasks.Task.Run(async () =>
+                await _monitor.OptimizeSystemAsync(_apiClient, _machineId, currentProcesses));
 
             MessageBox.Show($"{count}개의 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
 
@@ -229,8 +237,10 @@ namespace UPM.Desktop {
             BoostButtonIcon.Visibility = Visibility.Visible;
         }
         private void WhitelistButton_Click(object sender, RoutedEventArgs e) {
-            var currentProcesses = TopProcessItems.ItemsSource as List<ProcessInfoModel> ?? new List<ProcessInfoModel>();
-            var whitelistWindow = new WhitelistWindow(_apiClient, _machineId, currentProcesses);
+            // 화이트리스트에는 상위 8개가 아닌 현재 실행 중인 모든 프로세스를 전달
+            var allProcesses = _monitor.GetAllRunningProcesses();
+            // _monitor를 전달하여 화이트리스트 변경 시 인메모리 예외 목록도 즉시 갱신
+            var whitelistWindow = new WhitelistWindow(_apiClient, _machineId, allProcesses, _monitor);
             whitelistWindow.Owner = this;
             whitelistWindow.ShowDialog();
         }

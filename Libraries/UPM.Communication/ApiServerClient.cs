@@ -12,6 +12,8 @@ public class ApiServerClient : IDisposable {
     public ApiServerClient(string baseUrl) {
         _baseUrl = baseUrl.TrimEnd('/');
         _httpClient = new HttpClient();
+        // 서버 미연결 또는 느린 응답 시 무기한 대기 방지
+        _httpClient.Timeout = TimeSpan.FromSeconds(8);
     }
 
     /// <summary>실시간 시스템 상태를 <c>POST /api/v1/metrics</c> 로 전송합니다.</summary>
@@ -49,18 +51,27 @@ public class ApiServerClient : IDisposable {
     }
 
     /// <summary>서버에 현재 프로세스 목록을 보내고 스마트 최적화 종료 대상(killList)을 수신합니다.</summary>
-    public async Task<List<string>> AnalyzeOptimizationAsync(string machineId, List<ProcessInfoModel> topProcesses) {
+    /// <returns>
+    /// - <c>null</c>: 서버 통신 실패 또는 HTTP 에러 → 로컬 폴백 허용
+    /// - 빈 리스트: 서버 응답 성공, 종료 대상 없음 → 로컬 폴백 사용 안 함
+    /// - 항목이 있는 리스트: 서버가 종료 권장 목록 반환
+    /// </returns>
+    public async Task<List<string>?> AnalyzeOptimizationAsync(string machineId, List<ProcessInfoModel> topProcesses) {
         try {
             var payload = new { machineId, topProcesses };
             var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/optimization/analyze", payload);
             if (response.IsSuccessStatusCode) {
                 var result = await response.Content.ReadFromJsonAsync<AnalyzeResponse>();
+                // 서버 성공: KillList가 없으면 빈 리스트 반환 (null 아님 → 로컬 폴백 방지)
                 return result?.KillList ?? new List<string>();
             }
+            // HTTP 에러 응답 → null 반환 (로컬 폴백 허용)
+            Debug.WriteLine($"[UPM] 스마트 최적화 서버 응답 오류: {response.StatusCode}");
+            return null;
         } catch (Exception ex) {
             Debug.WriteLine($"[UPM] 스마트 최적화 분석 요청 실패: {ex.Message}");
+            return null; // 통신 실패 → null 반환 (로컬 폴백 허용)
         }
-        return new List<string>();
     }
 
     /// <summary>실제 종료된 프로세스 내역을 서버에 보고합니다.</summary>
