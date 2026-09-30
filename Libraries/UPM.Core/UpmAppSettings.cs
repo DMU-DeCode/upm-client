@@ -1,7 +1,8 @@
 namespace UPM.Core;
 
 /// <summary>UPM 데스크톱·연동 기본 설정 (환경별 변경 시 이 파일만 수정).</summary>
-public static class UpmAppSettings {
+public static class UpmAppSettings
+{
     /// <summary>메트릭 전송 대상 (UPM_Server FastAPI).</summary>
     public const string MetricsServerBaseUrl = "http://localhost:8000";
 

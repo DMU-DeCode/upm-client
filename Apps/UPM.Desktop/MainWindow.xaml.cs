@@ -10,8 +10,10 @@ using UPM.Communication;
 using UPM.Desktop.ViewModels;
 using UPM.Models;
 
-namespace UPM.Desktop {
-    public partial class MainWindow : Window {
+namespace UPM.Desktop
+{
+    public partial class MainWindow : Window
+    {
         private readonly HardwareMonitor _monitor;
         private readonly DispatcherTimer _timer;
         private readonly ApiServerClient _apiClient;
@@ -20,7 +22,8 @@ namespace UPM.Desktop {
         private int _tickCounter = 0;
         private DashboardViewModel? _viewModel;
 
-        public MainWindow() {
+        public MainWindow()
+        {
             InitializeComponent();
             ApplyHardwareDetailVisibility(DetailExpandToggle.IsChecked == true);
 
@@ -32,9 +35,12 @@ namespace UPM.Desktop {
             _apiClient = new ApiServerClient(UpmAppSettings.MetricsServerBaseUrl);
 
             _controlServer = new MobileControlHttpServer(_monitor);
-            try {
+            try
+            {
                 _controlServer.Start();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 System.Diagnostics.Debug.WriteLine($"[UPM] 모바일 제어 서버를 시작하지 못했습니다: {ex.Message}");
             }
 
@@ -55,43 +61,55 @@ namespace UPM.Desktop {
             _timer.Start();
         }
 
-        private async System.Threading.Tasks.Task LoadServerExceptionsAsync() {
-            try {
+        private async System.Threading.Tasks.Task LoadServerExceptionsAsync()
+        {
+            try
+            {
                 var exceptions = await _apiClient.GetUserExceptionsAsync(_machineId);
-                if (exceptions != null && exceptions.Count > 0) {
+                if (exceptions != null && exceptions.Count > 0)
+                {
                     _monitor.SetUserExceptions(exceptions);
                     // 서버 성공 시 로컬에도 동기화
                     UPM.Core.LocalWhitelistStore.Save(exceptions);
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 System.Diagnostics.Debug.WriteLine($"[UPM] 서버 예외 목록 로드 실패, 로컬 폴백: {ex.Message}");
                 // 서버 연결 실패 시 로컬 화이트리스트에서 로드
                 var localList = UPM.Core.LocalWhitelistStore.Load();
-                if (localList.Count > 0) {
+                if (localList.Count > 0)
+                {
                     _monitor.SetUserExceptions(localList);
                 }
             }
         }
 
-        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e) {
+        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        {
             RefreshWindowHeightToContent();
         }
 
-        private void LoadHardwareSpecs() {
-            try {
+        private void LoadHardwareSpecs()
+        {
+            try
+            {
                 var specs = _monitor.GetHardwareSpecs();
-                
+
                 // UI 업데이트 (이름이 부여된 TextBlock 제어)
                 CpuNameText.Text = specs.CpuName;
                 GpuNameText.Text = specs.GpuName;
                 RamTotalText.Text = specs.RamTotal;
                 MainboardText.Text = specs.Mainboard;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 MessageBox.Show($"사양을 불러오지 못했습니다.\n{ex.Message}", "UPM");
             }
         }
 
-        private async void Timer_Tick(object? sender, EventArgs e) {
+        private async void Timer_Tick(object? sender, EventArgs e)
+        {
             // 실시간 데이터 수집
             var status = _monitor.GetCurrentStatus();
 
@@ -99,7 +117,8 @@ namespace UPM.Desktop {
             status.MachineId = _machineId;
 
             // ViewModel 업데이트 (게이지 수치 · 호 방향 색 조각)
-            if (_viewModel != null) {
+            if (_viewModel != null)
+            {
                 var cpu = status.CpuUsagePercent;
                 var ram = status.RamUsagePercent;
                 var gpuUsage = status.GpuUsagePercent;
@@ -116,32 +135,40 @@ namespace UPM.Desktop {
 
             // 5초마다 서버로 상태 정보 전송
             _tickCounter++;
-            if (_tickCounter >= 5) {
+            if (_tickCounter >= 5)
+            {
                 _tickCounter = 0;
-                try {
+                try
+                {
                     await _apiClient.SendSystemStatusAsync(status);
-                } catch {
+                }
+                catch
+                {
                     // 서버 연결 실패 시 무시
                 }
             }
         }
 
-        private void DetailExpandToggle_OnChecked(object sender, RoutedEventArgs e) {
+        private void DetailExpandToggle_OnChecked(object sender, RoutedEventArgs e)
+        {
             ApplyHardwareDetailVisibility(true);
         }
 
-        private void DetailExpandToggle_OnUnchecked(object sender, RoutedEventArgs e) {
+        private void DetailExpandToggle_OnUnchecked(object sender, RoutedEventArgs e)
+        {
             ApplyHardwareDetailVisibility(false);
         }
 
-        private void ProcessScrollViewer_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+        private void ProcessScrollViewer_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
             if (sender is not ScrollViewer sv)
                 return;
             sv.ScrollToVerticalOffset(sv.VerticalOffset - e.Delta / 3.0);
             e.Handled = true;
         }
 
-        private void ApplyHardwareDetailVisibility(bool expanded) {
+        private void ApplyHardwareDetailVisibility(bool expanded)
+        {
             if (HardwareDetailHost == null || DetailExpandToggle == null)
                 return;
             HardwareDetailHost.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
@@ -150,33 +177,40 @@ namespace UPM.Desktop {
                 RefreshWindowHeightToContent();
         }
 
-        private void ApplyGaugeHeatDots(double cpuPercent, double ramPercent, double gpuHeatPercent) {
+        private void ApplyGaugeHeatDots(double cpuPercent, double ramPercent, double gpuHeatPercent)
+        {
             CpuHeatDot.Fill = HeatBrush(cpuPercent);
             RamHeatDot.Fill = HeatBrush(ramPercent);
             GpuHeatDot.Fill = HeatBrush(gpuHeatPercent);
         }
 
-        private static SolidColorBrush HeatBrush(double percent) {
+        private static SolidColorBrush HeatBrush(double percent)
+        {
             var c = DashboardViewModel.UsageHeatColor(percent);
             return new SolidColorBrush(Color.FromRgb(c.Red, c.Green, c.Blue));
         }
 
-        private void RefreshWindowHeightToContent() {
-            Dispatcher.BeginInvoke(new Action(() => {
+        private void RefreshWindowHeightToContent()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
                 SizeToContent = SizeToContent.Manual;
                 SizeToContent = SizeToContent.Height;
             }), DispatcherPriority.Background);
         }
 
-        private void AutoCloseModeToggle_Click(object sender, RoutedEventArgs e) {
+        private void AutoCloseModeToggle_Click(object sender, RoutedEventArgs e)
+        {
             bool isAuto = AutoCloseModeToggle.IsChecked == true;
             _monitor.AutoCloseMode = isAuto;
             AutoCloseModeLabel.Text = isAuto ? "자동 종료 모드" : "선택 종료 모드";
             AutoCloseModeIcon.Text = isAuto ? "\uE945" : "\uE762";
         }
 
-        private async void ProcessProtection_Click(object sender, RoutedEventArgs e) {
-            if (sender is CheckBox cb && cb.DataContext is ProcessInfoModel proc) {
+        private async void ProcessProtection_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox cb && cb.DataContext is ProcessInfoModel proc)
+            {
                 bool isProtected = _monitor.ToggleProcessProtection(proc.ProcessName);
                 proc.IsProtected = isProtected;
 
@@ -186,9 +220,12 @@ namespace UPM.Desktop {
             }
         }
 
-        private async void KillProcessItem_Click(object sender, RoutedEventArgs e) {
-            if (sender is Button btn && btn.DataContext is ProcessInfoModel proc) {
-                if (proc.IsSystemCritical) {
+        private async void KillProcessItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is ProcessInfoModel proc)
+            {
+                if (proc.IsSystemCritical)
+                {
                     MessageBox.Show("시스템 필수 프로세스는 종료할 수 없습니다.", "보호됨", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -199,20 +236,30 @@ namespace UPM.Desktop {
 
                 var confirm = MessageBox.Show(promptText, "프로세스 종료 확인", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
-                if (confirm == MessageBoxResult.Yes) {
-                    if (proc.ProcessCount > 1) {
+                if (confirm == MessageBoxResult.Yes)
+                {
+                    if (proc.ProcessCount > 1)
+                    {
                         int killedCount = _monitor.KillProcessGroupByName(proc.ProcessName, out var killedList);
-                        if (killedCount > 0) {
+                        if (killedCount > 0)
+                        {
                             await _apiClient.ReportOptimizationAsync(_machineId, killedList);
                             MessageBox.Show($"프로세스 '{proc.ProcessName}' ({killedCount}개 인스턴스)가 성공적으로 종료되었습니다.", "종료 완료", MessageBoxButton.OK, MessageBoxImage.Information);
-                        } else {
+                        }
+                        else
+                        {
                             MessageBox.Show("프로세스를 종료하지 못했습니다. (이미 종료되었거나 권한이 필요함)", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
-                    } else {
-                        if (_monitor.KillProcessById(proc.ProcessId, out string killedName)) {
+                    }
+                    else
+                    {
+                        if (_monitor.KillProcessById(proc.ProcessId, out string killedName))
+                        {
                             await _apiClient.ReportOptimizationAsync(_machineId, new List<string> { killedName });
                             MessageBox.Show($"프로세스 '{killedName}'가 성공적으로 종료되었습니다.", "종료 완료", MessageBoxButton.OK, MessageBoxImage.Information);
-                        } else {
+                        }
+                        else
+                        {
                             MessageBox.Show("프로세스를 종료하지 못했습니다. (이미 종료되었거나 권한이 필요함)", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                     }
@@ -220,7 +267,8 @@ namespace UPM.Desktop {
             }
         }
 
-        private async void BoostButton_Click(object sender, RoutedEventArgs e) {
+        private async void BoostButton_Click(object sender, RoutedEventArgs e)
+        {
             BoostButton.IsEnabled = false;
             BoostButtonLabel.Text = "최적화 중…";
             BoostButtonIcon.Visibility = Visibility.Collapsed;
@@ -236,7 +284,8 @@ namespace UPM.Desktop {
             BoostButtonLabel.Text = "빠른 최적화";
             BoostButtonIcon.Visibility = Visibility.Visible;
         }
-        private void WhitelistButton_Click(object sender, RoutedEventArgs e) {
+        private void WhitelistButton_Click(object sender, RoutedEventArgs e)
+        {
             // 화이트리스트에는 상위 8개가 아닌 현재 실행 중인 모든 프로세스를 전달
             var allProcesses = _monitor.GetAllRunningProcesses();
             // _monitor를 전달하여 화이트리스트 변경 시 인메모리 예외 목록도 즉시 갱신
@@ -245,7 +294,8 @@ namespace UPM.Desktop {
             whitelistWindow.ShowDialog();
         }
 
-        protected override void OnClosed(EventArgs e) {
+        protected override void OnClosed(EventArgs e)
+        {
             _timer.Stop();
             _controlServer.Dispose();
             _apiClient.Dispose();

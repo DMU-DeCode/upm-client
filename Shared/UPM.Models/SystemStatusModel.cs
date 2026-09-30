@@ -5,11 +5,13 @@ using System.Text.Json.Serialization;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace UPM.Models {
+namespace UPM.Models
+{
     /// <summary>
     /// 서버의 ProcessInfo Pydantic 모델과 일치하는 클래스입니다.
     /// </summary>
-    public class ProcessInfoModel : INotifyPropertyChanged {
+    public class ProcessInfoModel : INotifyPropertyChanged
+    {
         private bool _isProtected;
         private bool _isSelectedForKill;
         private bool _hasVisibleWindow;
@@ -24,10 +26,13 @@ namespace UPM.Models {
         public string ProcessName { get; set; } = "";
 
         [JsonIgnore]
-        public int ProcessCount {
+        public int ProcessCount
+        {
             get => _processCount;
-            set {
-                if (_processCount != value) {
+            set
+            {
+                if (_processCount != value)
+                {
                     _processCount = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(DisplayName));
@@ -53,10 +58,13 @@ namespace UPM.Models {
         public bool IsSystemCritical { get; set; }
 
         [JsonPropertyName("hasVisibleWindow")]
-        public bool HasVisibleWindow {
+        public bool HasVisibleWindow
+        {
             get => _hasVisibleWindow;
-            set {
-                if (_hasVisibleWindow != value) {
+            set
+            {
+                if (_hasVisibleWindow != value)
+                {
                     _hasVisibleWindow = value;
                     OnPropertyChanged();
                 }
@@ -64,10 +72,13 @@ namespace UPM.Models {
         }
 
         [JsonPropertyName("cpuPercent")]
-        public double CpuPercent {
+        public double CpuPercent
+        {
             get => _cpuPercent;
-            set {
-                if (Math.Abs(_cpuPercent - value) > 0.001) {
+            set
+            {
+                if (Math.Abs(_cpuPercent - value) > 0.001)
+                {
                     _cpuPercent = value;
                     OnPropertyChanged();
                 }
@@ -79,10 +90,13 @@ namespace UPM.Models {
 
         /// <summary>사용자가 종료 예외(보호)로 설정했는지 여부 (UI 연동)</summary>
         [JsonIgnore]
-        public bool IsProtected {
+        public bool IsProtected
+        {
             get => _isProtected;
-            set {
-                if (_isProtected != value) {
+            set
+            {
+                if (_isProtected != value)
+                {
                     _isProtected = value;
                     OnPropertyChanged();
                 }
@@ -91,10 +105,13 @@ namespace UPM.Models {
 
         /// <summary>사용자가 선택 종료 대상으로 체크했는지 여부 (UI 연동)</summary>
         [JsonIgnore]
-        public bool IsSelectedForKill {
+        public bool IsSelectedForKill
+        {
             get => _isSelectedForKill;
-            set {
-                if (_isSelectedForKill != value) {
+            set
+            {
+                if (_isSelectedForKill != value)
+                {
                     _isSelectedForKill = value;
                     OnPropertyChanged();
                 }
@@ -103,7 +120,8 @@ namespace UPM.Models {
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) {
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
@@ -111,7 +129,8 @@ namespace UPM.Models {
     /// <summary>
     /// v3.0 API 규격에 100% 맞춘 시스템 성능 상태 모델입니다.
     /// </summary>
-    public class SystemStatusModel {
+    public class SystemStatusModel
+    {
         [JsonPropertyName("machineId")]
         public string? MachineId { get; set; }
 

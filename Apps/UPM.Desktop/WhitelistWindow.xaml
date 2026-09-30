@@ -7,6 +7,7 @@
         xmlns:conv="clr-namespace:UPM.Desktop.Converters"
         mc:Ignorable="d"
         Title="화이트리스트 관리"
+        Icon="Assets/upm_icon.png"
         Width="760" Height="580"
         MinWidth="660" MinHeight="500"
         Background="#17171A"

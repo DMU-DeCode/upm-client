@@ -4,22 +4,27 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace UPM.Desktop.Converters {
+namespace UPM.Desktop.Converters
+{
     /// <summary>
     /// GPU 온도(°C) → 온도계 실루엣 안에서 보일 영역(아래에서 위로 자람).
     /// 전체 크기 그라데이션 + 하단 정렬 Clip으로 스케일 왜곡 없이 채움.
     /// </summary>
-    public class GpuTemperatureToThermoClipGeometryConverter : IValueConverter {
+    public class GpuTemperatureToThermoClipGeometryConverter : IValueConverter
+    {
         public double MinTemp { get; set; } = 28;
         public double MaxTemp { get; set; } = 92;
 
-        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
             double w = 48, h = 58;
-            if (parameter is string s && s.Contains(',')) {
+            if (parameter is string s && s.Contains(','))
+            {
                 var parts = s.Split(',');
                 if (parts.Length >= 2 &&
                     double.TryParse(parts[0].Trim(), NumberStyles.Any, culture, out var pw) &&
-                    double.TryParse(parts[1].Trim(), NumberStyles.Any, culture, out var ph)) {
+                    double.TryParse(parts[1].Trim(), NumberStyles.Any, culture, out var ph))
+                {
                     w = pw;
                     h = ph;
                 }
@@ -34,7 +39,8 @@ namespace UPM.Desktop.Converters {
             double ratio;
             if (temp <= 0)
                 ratio = 0.05;
-            else {
+            else
+            {
                 var span = MaxTemp - MinTemp;
                 ratio = span > 0 ? (temp - MinTemp) / span : 1;
                 ratio = Math.Clamp(ratio, 0.05, 1.0);

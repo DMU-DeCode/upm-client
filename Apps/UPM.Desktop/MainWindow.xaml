@@ -7,13 +7,13 @@
         xmlns:vm="clr-namespace:UPM.Desktop.ViewModels"
         xmlns:m="clr-namespace:UPM.Models;assembly=UPM.Models"
         xmlns:conv="clr-namespace:UPM.Desktop.Converters"
+        xmlns:gif="http://wpfanimatedgif.codeplex.com"
         mc:Ignorable="d"
         Title="UPM"
-        Width="900"
-        SizeToContent="Height"
+        Icon="Assets/upm_icon.png"
+        Width="900" Height="680"
         MinHeight="480"
-        ResizeMode="NoResize"
-        MinWidth="900" MaxWidth="900"
+        MinWidth="900"
         Background="#17171A"
         FontFamily="Segoe UI Variable, Segoe UI"
         WindowStartupLocation="CenterScreen"
@@ -232,16 +232,13 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- 헤더: UPM · Universal PC Manager | 빠른 최적화 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,14" LastChildFill="False">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="UPM" Foreground="{StaticResource Brush.TextPrimary}" FontSize="36" FontWeight="Bold"
-                           TextOptions.TextFormattingMode="Display" VerticalAlignment="Center"/>
-                <TextBlock Text="Universal PC Manager" Margin="14,0,0,0" VerticalAlignment="Center"
-                           Foreground="{StaticResource Brush.TextMuted}" FontSize="14" FontWeight="SemiBold"/>
+                <Image gif:ImageBehavior.AnimatedSource="pack://application:,,,/Assets/upm_in_window.gif" Height="48" VerticalAlignment="Center" Stretch="Uniform"/>
             </StackPanel>
             <Button x:Name="BoostButton" DockPanel.Dock="Right" VerticalAlignment="Center"
                     Style="{StaticResource PrimaryButton}" MinWidth="148"

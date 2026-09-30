@@ -8,18 +8,23 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace UPM.Desktop.Converters {
+namespace UPM.Desktop.Converters
+{
     /// <summary>실행 파일 경로에서 연결 아이콘 추출. 실패 시 단색 플레이스홀더.</summary>
-    public class ExePathToIconConverter : IValueConverter {
+    public class ExePathToIconConverter : IValueConverter
+    {
         private static readonly ConcurrentDictionary<string, ImageSource> Cache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly ImageSource Fallback = CreateSolidIcon(24, 80, 80, 82);
 
-        private static ImageSource CreateSolidIcon(int size, byte r, byte g, byte b) {
+        private static ImageSource CreateSolidIcon(int size, byte r, byte g, byte b)
+        {
             var wb = new WriteableBitmap(size, size, 96, 96, PixelFormats.Pbgra32, null);
             var stride = size * 4;
             var pixels = new byte[stride * size];
-            for (var y = 0; y < size; y++) {
-                for (var x = 0; x < size; x++) {
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
                     var i = y * stride + x * 4;
                     pixels[i] = b;
                     pixels[i + 1] = g;
@@ -33,13 +38,16 @@ namespace UPM.Desktop.Converters {
             return wb;
         }
 
-        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
             var path = value as string;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return Fallback;
 
-            return Cache.GetOrAdd(path, static p => {
-                try {
+            return Cache.GetOrAdd(path, static p =>
+            {
+                try
+                {
                     using var icon = Icon.ExtractAssociatedIcon(p);
                     if (icon == null) return Fallback;
                     var src = Imaging.CreateBitmapSourceFromHIcon(
@@ -48,7 +56,9 @@ namespace UPM.Desktop.Converters {
                         BitmapSizeOptions.FromEmptyOptions());
                     src.Freeze();
                     return src;
-                } catch {
+                }
+                catch
+                {
                     return Fallback;
                 }
             });
