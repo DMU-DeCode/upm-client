@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using UPM.Models;
 
 namespace UPM.Communication;
@@ -13,9 +14,11 @@ public class ApiServerClient : IDisposable
     public ApiServerClient(string baseUrl)
     {
         _baseUrl = baseUrl.TrimEnd('/');
-        _httpClient = new HttpClient();
-        // 서버 미연결 또는 느린 응답 시 무기한 대기 방지
-        _httpClient.Timeout = TimeSpan.FromSeconds(8);
+        _httpClient = new HttpClient
+        {
+            // 서버 미연결 또는 느린 응답 시 무기한 대기 방지
+            Timeout = TimeSpan.FromSeconds(8)
+        };
     }
 
     /// <summary>실시간 시스템 상태를 <c>POST /api/v1/metrics</c> 로 전송합니다.</summary>
@@ -38,7 +41,8 @@ public class ApiServerClient : IDisposable
     {
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<ExceptionsResponse>($"{_baseUrl}/api/v1/optimization/exceptions?machineId={Uri.EscapeDataString(machineId)}");
+            var res = await _httpClient.GetFromJsonAsync<ExceptionsResponse>(
+                $"{_baseUrl}/api/v1/optimization/exceptions?machineId={Uri.EscapeDataString(machineId)}");
             return res?.Exceptions ?? new List<string>();
         }
         catch (Exception ex)
@@ -112,89 +116,17 @@ public class ApiServerClient : IDisposable
         }
     }
 
-    public async Task<List<string>> GetExceptionsAsync(string machineId)
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync($"{_baseUrl}/api/v1/optimization/exceptions?machineId={machineId}");
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<ExceptionsResponse>();
-            return result?.Exceptions ?? new List<string>();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[UPM] 예외 목록 조회 실패: {ex.Message}");
-            return new List<string>();
-        }
-    }
-
-    public async Task<List<string>> AddExceptionAsync(string machineId, string processName)
-    {
-        try
-        {
-            var request = new ExceptionMutationRequest
-            {
-                MachineId = machineId,
-                ProcessName = processName,
-                Action = "add",
-            };
-            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/optimization/exceptions", request);
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<ExceptionsResponse>();
-            return result?.Exceptions ?? new List<string>();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[UPM] 예외 추가 실패: {ex.Message}");
-            return new List<string>();
-        }
-    }
-
-    public async Task<List<string>> RemoveExceptionAsync(string machineId, string processName)
-    {
-        try
-        {
-            var request = new ExceptionMutationRequest
-            {
-                MachineId = machineId,
-                ProcessName = processName,
-                Action = "remove",
-            };
-            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/optimization/exceptions", request);
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<ExceptionsResponse>();
-            return result?.Exceptions ?? new List<string>();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[UPM] 예외 삭제 실패: {ex.Message}");
-            return new List<string>();
-        }
-    }
-
     public void Dispose() => _httpClient.Dispose();
 
-    private class ExceptionMutationRequest
+    private sealed class ExceptionsResponse
     {
-        [System.Text.Json.Serialization.JsonPropertyName("machineId")]
-        public string MachineId { get; set; } = "";
-
-        [System.Text.Json.Serialization.JsonPropertyName("processName")]
-        public string ProcessName { get; set; } = "";
-
-        [System.Text.Json.Serialization.JsonPropertyName("action")]
-        public string Action { get; set; } = "";
-    }
-
-    private class ExceptionsResponse
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("exceptions")]
+        [JsonPropertyName("exceptions")]
         public List<string>? Exceptions { get; set; }
     }
 
-    private class AnalyzeResponse
+    private sealed class AnalyzeResponse
     {
-        [System.Text.Json.Serialization.JsonPropertyName("killList")]
+        [JsonPropertyName("killList")]
         public List<string>? KillList { get; set; }
     }
 }

@@ -10,49 +10,37 @@
         Icon="Assets/upm_icon.png"
         Width="760" Height="580"
         MinWidth="660" MinHeight="500"
-        Background="#17171A"
+        Background="{DynamicResource Brush.WindowBg}"
         FontFamily="Segoe UI Variable, Segoe UI"
         WindowStartupLocation="CenterOwner"
         Loaded="WhitelistWindow_OnLoaded">
 
-    <!-- App.xaml에 공용 리소스가 없어 MainWindow.xaml의 다크 테마 리소스 중 필요한 것만 복사해 사용합니다. -->
+    <!-- 팔레트(Brush.*)는 App 전역 Themes/Dark.xaml · Themes/Light.xaml에서 가져옵니다 (ThemeManager가 교체). -->
     <Window.Resources>
         <conv:ExePathToIconConverter x:Key="ExePathToIconConverter"/>
 
-        <SolidColorBrush x:Key="Brush.PanelBg" Color="#232326"/>
-        <SolidColorBrush x:Key="Brush.PanelBgElevated" Color="#2C2C30"/>
-        <SolidColorBrush x:Key="Brush.PanelBorder" Color="#3D3D42"/>
-        <SolidColorBrush x:Key="Brush.RowStripe" Color="#1E1E22"/>
-        <SolidColorBrush x:Key="Brush.TextPrimary" Color="#F2F2F7"/>
-        <SolidColorBrush x:Key="Brush.TextSecondary" Color="#AEAEB2"/>
-        <SolidColorBrush x:Key="Brush.TextTertiary" Color="#8E8E93"/>
-        <SolidColorBrush x:Key="Brush.TextMuted" Color="#636366"/>
-        <SolidColorBrush x:Key="Brush.Accent" Color="#34C759"/>
-        <SolidColorBrush x:Key="Brush.AccentHover" Color="#40D965"/>
-        <SolidColorBrush x:Key="Brush.AccentPressed" Color="#28A745"/>
-
         <Style x:Key="Text.SectionTitle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
         <Style x:Key="Text.SectionSubtitle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
         </Style>
         <Style x:Key="Text.Overline" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
             <Setter Property="FontSize" Value="9"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
 
         <Style x:Key="PanelBorder" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Brush.PanelBg}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.PanelBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="14"/>
@@ -60,7 +48,7 @@
 
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="{StaticResource Brush.Accent}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,12"/>
             <Setter Property="FontSize" Value="12"/>
@@ -79,10 +67,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentHover}"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.AccentHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentPressed}"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.AccentPressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
@@ -95,8 +83,8 @@
 
         <!-- 보조 버튼: 화이트리스트 이동(추가/제거)용. PrimaryButton과 동일 톤의 어두운 서피스. -->
         <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
-            <Setter Property="Background" Value="{StaticResource Brush.PanelBgElevated}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBgElevated}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="14,10"/>
             <Setter Property="FontSize" Value="12"/>
@@ -108,15 +96,15 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Root" CornerRadius="10" Padding="{TemplateBinding Padding}"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{StaticResource Brush.PanelBorder}" BorderThickness="1">
+                                BorderBrush="{DynamicResource Brush.PanelBorder}" BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#38383C"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfaceHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#353539"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfacePressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
@@ -128,10 +116,10 @@
         </Style>
 
         <Style x:Key="DarkTextBox" TargetType="TextBox">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
-            <Setter Property="CaretBrush" Value="{StaticResource Brush.TextPrimary}"/>
-            <Setter Property="Background" Value="{StaticResource Brush.PanelBgElevated}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBgElevated}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.PanelBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -153,7 +141,7 @@
         <Style x:Key="ListBoxDark" TargetType="ListBox">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -181,14 +169,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="ItemsControl.AlternationIndex" Value="1">
-                                <Setter TargetName="RowBg" Property="Background" Value="{StaticResource Brush.RowStripe}"/>
+                                <Setter TargetName="RowBg" Property="Background" Value="{DynamicResource Brush.RowStripe}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="RowBg" Property="Background" Value="#38383C"/>
+                                <Setter TargetName="RowBg" Property="Background" Value="{DynamicResource Brush.SurfaceHover}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="RowBg" Property="Background" Value="#353539"/>
-                                <Setter TargetName="RowBg" Property="BorderBrush" Value="{StaticResource Brush.Accent}"/>
+                                <Setter TargetName="RowBg" Property="Background" Value="{DynamicResource Brush.SurfacePressed}"/>
+                                <Setter TargetName="RowBg" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
                                 <Setter TargetName="RowBg" Property="BorderThickness" Value="1"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -215,7 +203,7 @@
         </Style>
 
         <Style x:Key="DarkTabItem" TargetType="TabItem">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="10,5"/>
@@ -230,11 +218,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="#2C2C30"/>
-                                <Setter TargetName="TabText" Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource Brush.PanelBgElevated}"/>
+                                <Setter TargetName="TabText" Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="#28282C"/>
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource Brush.TabHover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -260,7 +248,7 @@
             <!-- 좌측: 타이틀 -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71C;" FontSize="20"
-                           Foreground="#64D2FF" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                           Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="화이트리스트 (종료 제외 목록)" Style="{StaticResource Text.SectionTitle}" FontSize="16"/>
                     <TextBlock Text="여기에 등록된 프로세스는 빠른 최적화 시 종료 대상에서 제외됩니다" Style="{StaticResource Text.SectionSubtitle}"/>
@@ -319,7 +307,7 @@
                                            Source="{Binding ExecutablePath, Converter={StaticResource ExePathToIconConverter}}"
                                            SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
                                     <TextBlock Grid.Column="1" Text="{Binding ProcessName}" Margin="8,0,0,0"
-                                               Foreground="{StaticResource Brush.TextPrimary}" FontSize="12"
+                                               Foreground="{DynamicResource Brush.TextPrimary}" FontSize="12"
                                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                                 </Grid>
                             </DataTemplate>
@@ -347,7 +335,7 @@
                              ItemContainerStyle="{StaticResource ListItemDark}" AlternationCount="2">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" Foreground="{StaticResource Brush.TextPrimary}" FontSize="12"
+                                <TextBlock Text="{Binding}" Foreground="{DynamicResource Brush.TextPrimary}" FontSize="12"
                                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

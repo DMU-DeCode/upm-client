@@ -1,12 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
-using UPM.Models;
-using UPM.Communication;
+using System.Threading.Tasks;
 using LibreHardwareMonitor.Hardware;
+using UPM.Communication;
+using UPM.Models;
 
 namespace UPM.Core
 {
@@ -16,6 +18,8 @@ namespace UPM.Core
         private readonly PerformanceCounter _availableRamCounter;
         private readonly Computer _computer;
         private double _totalRamMBytes;
+        private readonly int _currentSessionId;
+        private readonly int _selfProcessId;
 
         public HardwareMonitor()
         {
@@ -27,6 +31,48 @@ namespace UPM.Core
 
             _computer = new Computer { IsGpuEnabled = true };
             _computer.Open();
+
+            try
+            {
+                using var self = Process.GetCurrentProcess();
+                _selfProcessId = self.Id;
+                _currentSessionId = self.SessionId;
+            }
+            catch
+            {
+                _selfProcessId = Environment.ProcessId;
+                _currentSessionId = 1;
+            }
+
+            EnsureTotalRamInitialized();
+        }
+
+        private void EnsureTotalRamInitialized()
+        {
+            if (_totalRamMBytes > 0) return;
+
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize FROM Win32_OperatingSystem");
+                foreach (var obj in searcher.Get())
+                {
+                    double kb = Convert.ToDouble(obj["TotalVisibleMemorySize"]);
+                    if (kb > 0)
+                    {
+                        _totalRamMBytes = kb / 1024.0;
+                        return;
+                    }
+                }
+            }
+            catch { /* WMI 실패 시 GC 폴백 */ }
+
+            try
+            {
+                var gcMem = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+                if (gcMem > 0)
+                    _totalRamMBytes = gcMem / (1024.0 * 1024.0);
+            }
+            catch { /* ignore */ }
         }
 
         // CPU-Z처럼 상세 사양 정보를 가져오는 메서드
@@ -48,22 +94,19 @@ namespace UPM.Core
                 }
 
                 // 2. RAM 총량
-                using (var searcher = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize FROM Win32_OperatingSystem"))
+                EnsureTotalRamInitialized();
+                if (_totalRamMBytes > 0)
                 {
-                    foreach (var obj in searcher.Get())
-                    {
-                        double kb = Convert.ToDouble(obj["TotalVisibleMemorySize"]);
-                        specs.RamTotal = $"{Math.Round(kb / (1024 * 1024), 0)} GB";
-                        _totalRamMBytes = kb / 1024;
-                    }
+                    specs.RamTotal = $"{Math.Round(_totalRamMBytes / 1024.0, 0)} GB";
                 }
 
-                // 3. GPU 이름
+                // 3. GPU 이름 (NVIDIA, AMD, Intel 지원)
                 foreach (var hardware in _computer.Hardware)
                 {
-                    if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
+                    if (IsGpuHardware(hardware.HardwareType))
                     {
                         specs.GpuName = hardware.Name;
+                        break;
                     }
                 }
 
@@ -83,6 +126,8 @@ namespace UPM.Core
 
         public SystemStatusModel GetCurrentStatus()
         {
+            EnsureTotalRamInitialized();
+
             var status = new SystemStatusModel
             {
                 Timestamp = DateTime.Now,
@@ -100,50 +145,14 @@ namespace UPM.Core
 
             var usedRamBytes = usedRamMBytes * 1024.0 * 1024.0;
 
-            status.GpuUsagePercent = GetGpuUsage();
-            status.GpuTemperatureCelsius = GetGpuTemperature();
+            var (gpuUsage, gpuTemp) = GetGpuMetrics();
+            status.GpuUsagePercent = gpuUsage;
+            status.GpuTemperatureCelsius = gpuTemp;
 
             // 상위 프로세스 (작업 집합 메모리 기준) — 접근 불가 프로세스는 건너뜀
             try
             {
-                var rows = new List<ProcessInfoModel>();
-                foreach (var p in Process.GetProcesses())
-                {
-                    try
-                    {
-                        if (string.IsNullOrEmpty(p.ProcessName)) continue;
-                        string? exePath = GetProcessExecutablePath(p);
-
-                        bool hasWindow = false;
-                        try
-                        {
-                            hasWindow = p.MainWindowHandle != IntPtr.Zero;
-                        }
-                        catch { /* ignore */ }
-
-                        var procModel = new ProcessInfoModel
-                        {
-                            ProcessId = p.Id,
-                            ProcessName = p.ProcessName,
-                            MemoryWorkingSetBytes = p.WorkingSet64,
-                            ExecutablePath = exePath,
-                            IsSystemCritical = IsCritical(p.ProcessName),
-                            HasVisibleWindow = hasWindow,
-                            IsProtected = IsProcessProtected(p.ProcessName),
-                            ProcessCount = 1
-                        };
-
-                        rows.Add(procModel);
-                    }
-                    catch
-                    {
-                        // 일부 시스템/보호 프로세스는 지표 읽기 실패
-                    }
-                    finally
-                    {
-                        try { p.Dispose(); } catch { /* ignore */ }
-                    }
-                }
+                var rows = CollectRawProcesses();
 
                 // 프로세스 이름 단위 항상 그룹화 (메모리 점유 합산 및 인스턴스 개수 집계)
                 List<ProcessInfoModel> processedRows = rows
@@ -159,7 +168,9 @@ namespace UPM.Core
                             ExecutablePath = firstWithExe.ExecutablePath,
                             IsSystemCritical = IsCritical(g.Key),
                             HasVisibleWindow = g.Any(x => x.HasVisibleWindow),
+                            IsCurrentUserOwned = g.Any(x => x.IsCurrentUserOwned),
                             IsProtected = IsProcessProtected(g.Key),
+                            IsSelectedForKill = IsProcessSelectedForKill(g.Key),
                             ProcessCount = g.Count()
                         };
                     })
@@ -185,6 +196,48 @@ namespace UPM.Core
             return status;
         }
 
+        private List<ProcessInfoModel> CollectRawProcesses()
+        {
+            var rows = new List<ProcessInfoModel>();
+            foreach (var p in Process.GetProcesses())
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(p.ProcessName)) continue;
+                    string? exePath = GetProcessExecutablePath(p);
+
+                    bool hasWindow = false;
+                    try { hasWindow = p.MainWindowHandle != IntPtr.Zero; } catch { /* ignore */ }
+
+                    bool isUserOwned = false;
+                    try { isUserOwned = p.SessionId == _currentSessionId && p.SessionId > 0; } catch { /* ignore */ }
+
+                    rows.Add(new ProcessInfoModel
+                    {
+                        ProcessId = p.Id,
+                        ProcessName = p.ProcessName,
+                        MemoryWorkingSetBytes = p.WorkingSet64,
+                        ExecutablePath = exePath,
+                        IsSystemCritical = IsCritical(p.ProcessName) || p.Id == _selfProcessId,
+                        HasVisibleWindow = hasWindow,
+                        IsCurrentUserOwned = isUserOwned,
+                        IsProtected = IsProcessProtected(p.ProcessName),
+                        IsSelectedForKill = IsProcessSelectedForKill(p.ProcessName),
+                        ProcessCount = 1
+                    });
+                }
+                catch
+                {
+                    // 일부 시스템/보호 프로세스는 지표 읽기 실패
+                }
+                finally
+                {
+                    try { p.Dispose(); } catch { /* ignore */ }
+                }
+            }
+            return rows;
+        }
+
         private static readonly string[] _criticalProcessNames = {
             // Windows 필수 시스템 프로세스
             "svchost", "explorer", "System", "csrss", "wininit", "lsass", "smss", "services",
@@ -193,14 +246,19 @@ namespace UPM.Core
             "spoolsv", "wlanext", "WmiPrvSE", "dllhost", "sihost", "taskhostw",
             "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost",
             "TextInputHost", "ctfmon", "Registry", "Idle", "Memory Compression",
+            "audiodg", "lsaiso", "SgrmBroker", "dashost", "ApplicationFrameHost",
+            "SystemSettings", "UserOOBEBroker", " LockApp", "Widgets", "SearchIndexer",
+            // 개발 도구 및 주요 런타임 안전 보호 (로컬 폴백 시 개발 환경 크래시 방지)
+            "devenv", "Code", "rider64", "MSBuild", "VBCSCompiler", "dotnet",
+            "powershell", "pwsh", "cmd", "WindowsTerminal", "OpenConsole", "git",
             // UPM 자체 보호
             "UPM.Desktop"
         };
 
         private readonly HashSet<string> _userExcludedProcesses = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _selectedForKillProcesses = new(StringComparer.OrdinalIgnoreCase);
 
         public bool AutoCloseMode { get; set; } = true;
-        public bool EnableProcessGrouping { get; set; } = true;
 
         public void SetUserExceptions(IEnumerable<string> exceptions)
         {
@@ -239,11 +297,16 @@ namespace UPM.Core
                 }
             }
 
-            // 영속성 보장: 인메모리 변경을 로컬 파일에 반영
+            // 보호 설정 시 선택 종료 대상에서 해제
             if (isNowProtected)
+            {
+                SetProcessSelectedForKill(processName, false);
                 LocalWhitelistStore.Add(processName);
+            }
             else
+            {
                 LocalWhitelistStore.Remove(processName);
+            }
 
             return isNowProtected;
         }
@@ -261,40 +324,69 @@ namespace UPM.Core
             }
         }
 
+        public void SetProcessSelectedForKill(string processName, bool isSelected)
+        {
+            if (string.IsNullOrWhiteSpace(processName) || IsCritical(processName))
+                return;
+
+            lock (_selectedForKillProcesses)
+            {
+                if (isSelected)
+                    _selectedForKillProcesses.Add(processName);
+                else
+                    _selectedForKillProcesses.Remove(processName);
+            }
+        }
+
+        public bool IsProcessSelectedForKill(string processName)
+        {
+            if (string.IsNullOrWhiteSpace(processName) || IsCritical(processName))
+                return false;
+
+            lock (_selectedForKillProcesses)
+            {
+                return _selectedForKillProcesses.Contains(processName);
+            }
+        }
+
         private static bool IsCritical(string name) =>
             _criticalProcessNames.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase));
 
-        private double GetGpuTemperature()
-        {
-            foreach (var hardware in _computer.Hardware)
-            {
-                if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
-                {
-                    hardware.Update();
-                    var tempSensor = hardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
-                    if (tempSensor != null) return (double)tempSensor.Value.GetValueOrDefault();
-                }
-            }
-            return 0;
-        }
+        private static bool IsGpuHardware(HardwareType type) =>
+            type == HardwareType.GpuNvidia ||
+            type == HardwareType.GpuAmd ||
+            type == HardwareType.GpuIntel;
 
-        /// <summary>인식된 NVIDIA/AMD GPU의 Load 센서 중 전역 최대값을 사용률(0~100%)으로 사용합니다.</summary>
-        private double GetGpuUsage()
+        /// <summary>인식된 GPU(NVIDIA/AMD/Intel)를 1회 Update하여 사용률(%)과 온도(°C)를 함께 반환합니다.</summary>
+        private (double UsagePercent, double TemperatureCelsius) GetGpuMetrics()
         {
-            double best = 0;
+            double bestLoad = 0;
+            double? temperature = null;
+
             foreach (var hardware in _computer.Hardware)
             {
-                if (hardware.HardwareType != HardwareType.GpuNvidia && hardware.HardwareType != HardwareType.GpuAmd)
+                if (!IsGpuHardware(hardware.HardwareType))
                     continue;
+
                 hardware.Update();
                 foreach (var s in hardware.Sensors)
                 {
-                    if (s.SensorType != SensorType.Load || s.Value is null) continue;
-                    var v = (double)s.Value.Value;
-                    if (v > best) best = v;
+                    if (s.Value is null) continue;
+
+                    if (s.SensorType == SensorType.Load)
+                    {
+                        var v = (double)s.Value.Value;
+                        if (v > bestLoad) bestLoad = v;
+                    }
+                    else if (s.SensorType == SensorType.Temperature && temperature is null)
+                    {
+                        temperature = (double)s.Value.Value;
+                    }
                 }
             }
-            return best > 0 ? Math.Round(Math.Clamp(best, 0, 100), 1) : 0;
+
+            double usage = bestLoad > 0 ? Math.Round(Math.Clamp(bestLoad, 0, 100), 1) : 0;
+            return (usage, temperature ?? 0);
         }
 
         /// <summary>
@@ -303,38 +395,7 @@ namespace UPM.Core
         /// </summary>
         public List<ProcessInfoModel> GetAllRunningProcesses()
         {
-            var rows = new List<ProcessInfoModel>();
-            foreach (var p in Process.GetProcesses())
-            {
-                try
-                {
-                    if (string.IsNullOrEmpty(p.ProcessName)) continue;
-                    string? exePath = GetProcessExecutablePath(p);
-
-                    bool hasWindow = false;
-                    try { hasWindow = p.MainWindowHandle != IntPtr.Zero; } catch { /* ignore */ }
-
-                    rows.Add(new ProcessInfoModel
-                    {
-                        ProcessId = p.Id,
-                        ProcessName = p.ProcessName,
-                        MemoryWorkingSetBytes = p.WorkingSet64,
-                        ExecutablePath = exePath,
-                        IsSystemCritical = IsCritical(p.ProcessName),
-                        HasVisibleWindow = hasWindow,
-                        IsProtected = IsProcessProtected(p.ProcessName),
-                        ProcessCount = 1
-                    });
-                }
-                catch
-                {
-                    // 일부 시스템/보호 프로세스는 지표 읽기 실패
-                }
-                finally
-                {
-                    try { p.Dispose(); } catch { /* ignore */ }
-                }
-            }
+            var rows = CollectRawProcesses();
 
             // 프로세스 이름 단위 그룹화 (메모리 점유 합산 및 인스턴스 개수 집계)
             return rows
@@ -350,7 +411,9 @@ namespace UPM.Core
                         ExecutablePath = firstWithExe.ExecutablePath,
                         IsSystemCritical = IsCritical(g.Key),
                         HasVisibleWindow = g.Any(x => x.HasVisibleWindow),
+                        IsCurrentUserOwned = g.Any(x => x.IsCurrentUserOwned),
                         IsProtected = IsProcessProtected(g.Key),
+                        IsSelectedForKill = IsProcessSelectedForKill(g.Key),
                         ProcessCount = g.Count()
                     };
                 })
@@ -371,6 +434,9 @@ namespace UPM.Core
         public bool KillProcessById(int processId, out string processName)
         {
             processName = "";
+            if (processId == _selfProcessId)
+                return false;
+
             try
             {
                 using var p = Process.GetProcessById(processId);
@@ -404,11 +470,16 @@ namespace UPM.Core
                 {
                     try
                     {
+                        if (p.Id == _selfProcessId) continue;
                         p.Kill();
                         p.WaitForExit(1000);
                         killedNames.Add(processName);
                     }
                     catch { /* ignore */ }
+                    finally
+                    {
+                        try { p.Dispose(); } catch { /* ignore */ }
+                    }
                 }
             }
             catch { /* ignore */ }
@@ -427,9 +498,6 @@ namespace UPM.Core
             if (AutoCloseMode)
             {
                 // 1. 서버 연동 스마트 최적화 시도
-                // serverSuccess = 서버가 정상 응답(null이 아닌 리스트)을 줬는지 여부.
-                // killList가 빈 배열이어도(종료 대상 없음) 서버 통신은 성공한 것이므로
-                // 로컬 폴백(2번)으로 떨어지지 않도록 반드시 true로 세팅해야 합니다.
                 if (apiClient != null && !string.IsNullOrEmpty(machineId) && currentProcesses != null && currentProcesses.Count > 0)
                 {
                     try
@@ -441,77 +509,73 @@ namespace UPM.Core
                             serverSuccess = true; // 빈 리스트여도 서버 통신 성공으로 처리
                             foreach (var name in killList)
                             {
-                                // 필수 시스템 프로세스 및 UPM 자체 보호 (IsCritical 포함)
-                                if (IsCritical(name)) continue;
-                                if (IsProcessProtected(name)) continue;
-                                try
-                                {
-                                    foreach (var p in Process.GetProcessesByName(name))
-                                    {
-                                        p.Kill();
-                                        p.WaitForExit(1000);
-                                        killedNames.Add(name);
-                                    }
-                                }
-                                catch { /* ignore */ }
+                                if (IsCritical(name) || IsProcessProtected(name)) continue;
+                                KillProcessGroupByName(name, out var killedGroup);
+                                killedNames.AddRange(killedGroup);
                             }
                         }
-                        // killList == null 이면 serverSuccess = false 유지 → 로컬 폴백
                     }
                     catch { /* 서버 분석 실패 시 로컬 로직으로 폴백 */ }
                 }
 
-                // 2. 서버 미연결 시: 로컬 화이트리스트 + 필수 프로세스를 제외한 모든 프로세스 종료
+                // 2. 서버 미연결 시 안전한 로컬 폴백:
+                // 현재 사용자 세션의 비필수·미보호 프로세스 중 메모리 점유 상위 항목(50MB 이상)만 선별 정리
                 if (!serverSuccess)
                 {
                     var localWhitelist = LocalWhitelistStore.Load();
                     var whitelistSet = new HashSet<string>(localWhitelist, StringComparer.OrdinalIgnoreCase);
+                    const long minMemoryThresholdBytes = 50L * 1024 * 1024; // 50 MB
 
-                    foreach (var p in Process.GetProcesses())
+                    var candidates = CollectRawProcesses()
+                        .Where(p => p.IsCurrentUserOwned &&
+                                    !p.IsSystemCritical &&
+                                    !whitelistSet.Contains(p.ProcessName) &&
+                                    !IsProcessProtected(p.ProcessName))
+                        .GroupBy(p => p.ProcessName, StringComparer.OrdinalIgnoreCase)
+                        .Select(g => new
+                        {
+                            ProcessName = g.Key,
+                            TotalMemory = g.Sum(x => x.MemoryWorkingSetBytes)
+                        })
+                        .Where(g => g.TotalMemory >= minMemoryThresholdBytes)
+                        .OrderByDescending(g => g.TotalMemory)
+                        .Take(5)
+                        .ToList();
+
+                    foreach (var target in candidates)
                     {
-                        try
-                        {
-                            if (string.IsNullOrEmpty(p.ProcessName)) continue;
-                            // 필수 시스템 프로세스 건너뜀
-                            if (IsCritical(p.ProcessName)) continue;
-                            // 사용자 보호(화이트리스트) 프로세스 건너뜀
-                            if (whitelistSet.Contains(p.ProcessName)) continue;
-                            // HardwareMonitor 내부 _userExcludedProcesses도 확인
-                            if (IsProcessProtected(p.ProcessName)) continue;
-
-                            p.Kill();
-                            p.WaitForExit(1000);
-                            killedNames.Add(p.ProcessName);
-                        }
-                        catch
-                        {
-                            // 일부 프로세스는 권한 부족 등으로 종료 실패 가능
-                        }
-                        finally
-                        {
-                            try { p.Dispose(); } catch { /* ignore */ }
-                        }
+                        KillProcessGroupByName(target.ProcessName, out var killedGroup);
+                        killedNames.AddRange(killedGroup);
                     }
                 }
             }
             else
             {
-                // 선택 종료 모드: 사용자가 선택한 프로세스만 종료
-                if (currentProcesses != null)
+                // 선택 종료 모드: 사용자가 체크한 프로세스(그룹 포함)만 안전하게 종료
+                List<string> selectedTargets;
+                lock (_selectedForKillProcesses)
                 {
-                    foreach (var proc in currentProcesses)
+                    selectedTargets = _selectedForKillProcesses.ToList();
+                }
+
+                if (selectedTargets.Count == 0 && currentProcesses != null)
+                {
+                    selectedTargets = currentProcesses
+                        .Where(p => p.IsSelectedForKill)
+                        .Select(p => p.ProcessName)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+
+                foreach (var targetName in selectedTargets)
+                {
+                    if (IsCritical(targetName) || IsProcessProtected(targetName))
+                        continue;
+
+                    if (KillProcessGroupByName(targetName, out var killedGroup) > 0)
                     {
-                        if (proc.IsSelectedForKill && !IsProcessProtected(proc.ProcessName))
-                        {
-                            try
-                            {
-                                using var p = Process.GetProcessById(proc.ProcessId);
-                                p.Kill();
-                                p.WaitForExit(1000);
-                                killedNames.Add(proc.ProcessName);
-                            }
-                            catch { /* ignore */ }
-                        }
+                        killedNames.AddRange(killedGroup);
+                        SetProcessSelectedForKill(targetName, false);
                     }
                 }
             }
@@ -591,4 +655,3 @@ namespace UPM.Core
         #endregion
     }
 }
-

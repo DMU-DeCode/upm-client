@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 라이트(화이트) 테마 팔레트 (Dark.xaml과 키 동일하게 유지할 것) -->
+
+    <!-- 베이스 -->
+    <SolidColorBrush x:Key="Brush.WindowBg" Color="#F2F2F7"/>
+    <SolidColorBrush x:Key="Brush.PanelBg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.PanelBgElevated" Color="#F5F5F8"/>
+    <SolidColorBrush x:Key="Brush.PanelBorder" Color="#E0E0E6"/>
+    <SolidColorBrush x:Key="Brush.RowStripe" Color="#F4F4F7"/>
+    <SolidColorBrush x:Key="Brush.SurfaceHover" Color="#E8E8ED"/>
+    <SolidColorBrush x:Key="Brush.SurfacePressed" Color="#E0E0E6"/>
+    <SolidColorBrush x:Key="Brush.TabHover" Color="#EDEDF2"/>
+
+    <!-- 텍스트 -->
+    <SolidColorBrush x:Key="Brush.TextPrimary" Color="#1C1C1E"/>
+    <SolidColorBrush x:Key="Brush.TextSecondary" Color="#48484A"/>
+    <SolidColorBrush x:Key="Brush.TextTertiary" Color="#6C6C70"/>
+    <SolidColorBrush x:Key="Brush.TextMuted" Color="#8E8E93"/>
+    <SolidColorBrush x:Key="Brush.GaugeValueText" Color="#1C1C1E"/>
+
+    <!-- 액센트 (흰 배경 대비 확보를 위해 다크보다 한 톤 진하게) -->
+    <SolidColorBrush x:Key="Brush.Accent" Color="#2DB24F"/>
+    <SolidColorBrush x:Key="Brush.AccentHover" Color="#34C759"/>
+    <SolidColorBrush x:Key="Brush.AccentPressed" Color="#24963F"/>
+    <SolidColorBrush x:Key="Brush.IconTint" Color="#0A84C6"/>
+
+    <!-- 도움말 아이콘 배경 -->
+    <SolidColorBrush x:Key="Brush.HelpIconBg" Color="#140A84C6"/>
+    <SolidColorBrush x:Key="Brush.HelpIconBgHover" Color="#2A0A84C6"/>
+
+    <!-- 게이지 빈 영역 -->
+    <SolidColorBrush x:Key="Brush.ProgressTrack" Color="#E1E1E6"/>
+    <Color x:Key="Color.ArcTrack">#E3E3E8</Color>
+
+    <!-- 위험(종료) 버튼 -->
+    <SolidColorBrush x:Key="Brush.DangerBg" Color="#FDECEC"/>
+    <SolidColorBrush x:Key="Brush.DangerBgHover" Color="#FAD4D4"/>
+    <SolidColorBrush x:Key="Brush.DangerText" Color="#D70015"/>
+    <SolidColorBrush x:Key="Brush.DangerTextHover" Color="#B0000F"/>
+</ResourceDictionary>

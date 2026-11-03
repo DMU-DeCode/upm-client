@@ -13,10 +13,8 @@ namespace UPM.Core;
 /// </summary>
 public class LocalWhitelistStore
 {
-    private static readonly string _directory =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UPM");
-
-    private static readonly string _filePath = Path.Combine(_directory, "whitelist.json");
+    private static readonly string _directory = UpmAppSettings.LocalDataDirectory;
+    private static readonly string _filePath = UpmAppSettings.WhitelistFilePath;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {

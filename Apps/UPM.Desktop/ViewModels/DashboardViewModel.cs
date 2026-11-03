@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -23,6 +23,9 @@ namespace UPM.Desktop.ViewModels
         private readonly ObservableValue[] _cpuSlices = new ObservableValue[HeatSliceCount];
         private readonly ObservableValue[] _ramSlices = new ObservableValue[HeatSliceCount];
         private readonly ObservableValue[] _gpuSlices = new ObservableValue[HeatSliceCount];
+
+        /// <summary>테마 전환 시 빈 호 색을 바꾸기 위해 보관하는 트랙 시리즈.</summary>
+        private readonly List<PieSeries<ObservableValue>> _trackSeries = new();
 
         public ObservableValue CpuValue { get; } = new(0);
         public ObservableValue CpuTrackValue { get; } = new(100);
@@ -69,9 +72,16 @@ namespace UPM.Desktop.ViewModels
                 _gpuSlices[i] = new ObservableValue(0);
             }
 
-            _cpuGauge = CreateArcHeatGauge(_cpuSlices, CpuTrackValue, "CPU");
-            _ramGauge = CreateArcHeatGauge(_ramSlices, RamTrackValue, "RAM");
-            _gpuGauge = CreateArcHeatGauge(_gpuSlices, GpuTrackValue, "GPU");
+            _cpuGauge = CreateArcHeatGauge(_cpuSlices, CpuTrackValue, "CPU", _trackSeries);
+            _ramGauge = CreateArcHeatGauge(_ramSlices, RamTrackValue, "RAM", _trackSeries);
+            _gpuGauge = CreateArcHeatGauge(_gpuSlices, GpuTrackValue, "GPU", _trackSeries);
+        }
+
+        /// <summary>테마 변경 시 게이지의 빈(트랙) 호 색을 교체합니다.</summary>
+        public void ApplyTrackColor(SKColor color)
+        {
+            foreach (var s in _trackSeries)
+                s.Fill = new SolidColorPaint(color);
         }
 
         public void ApplyCpuGauge(double cpuPercent)
@@ -117,7 +127,8 @@ namespace UPM.Desktop.ViewModels
         /// <summary>
         /// 호 시작(저부하)에서 초록 → 끝(고부하)으로 빨강까지, 각 조각은 스케일 위치의 색으로 칠함 (호 방향 스윕과 동일한 분위기).
         /// </summary>
-        private static IEnumerable<ISeries> CreateArcHeatGauge(ObservableValue[] slices, ObservableValue track, string tag)
+        private static IEnumerable<ISeries> CreateArcHeatGauge(ObservableValue[] slices, ObservableValue track, string tag,
+            List<PieSeries<ObservableValue>> trackSink)
         {
             var trackPaint = new SolidColorPaint(ArcTrackEmptyColor);
             var list = new List<ISeries>();
@@ -140,7 +151,7 @@ namespace UPM.Desktop.ViewModels
                 });
             }
 
-            list.Add(new PieSeries<ObservableValue>
+            var trackSeries = new PieSeries<ObservableValue>
             {
                 Values = new[] { track },
                 Name = $"{tag}_track",
@@ -151,7 +162,9 @@ namespace UPM.Desktop.ViewModels
                 ShowDataLabels = false,
                 IsHoverable = false,
                 HoverPushout = 0
-            });
+            };
+            trackSink.Add(trackSeries);
+            list.Add(trackSeries);
 
             return list;
         }

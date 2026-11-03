@@ -14,7 +14,7 @@
         Width="900" Height="680"
         MinHeight="480"
         MinWidth="900"
-        Background="#17171A"
+        Background="{DynamicResource Brush.WindowBg}"
         FontFamily="Segoe UI Variable, Segoe UI"
         WindowStartupLocation="CenterScreen"
         Loaded="MainWindow_OnLoaded">
@@ -24,20 +24,7 @@
         <conv:ExePathToIconConverter x:Key="ExePathToIconConverter"/>
         <conv:GpuTemperatureToThermoClipGeometryConverter x:Key="GpuThermoClipConverter"/>
 
-        <!-- 팔레트: 다크 베이스 + 단일 액센트(최적화) + 게이지 구분색 -->
-        <SolidColorBrush x:Key="Brush.WindowBg" Color="#17171A"/>
-        <SolidColorBrush x:Key="Brush.PanelBg" Color="#232326"/>
-        <SolidColorBrush x:Key="Brush.PanelBgElevated" Color="#2C2C30"/>
-        <SolidColorBrush x:Key="Brush.PanelBorder" Color="#3D3D42"/>
-        <SolidColorBrush x:Key="Brush.RowStripe" Color="#1E1E22"/>
-        <SolidColorBrush x:Key="Brush.TextPrimary" Color="#F2F2F7"/>
-        <SolidColorBrush x:Key="Brush.TextSecondary" Color="#AEAEB2"/>
-        <SolidColorBrush x:Key="Brush.TextTertiary" Color="#8E8E93"/>
-        <SolidColorBrush x:Key="Brush.TextMuted" Color="#636366"/>
-        <SolidColorBrush x:Key="Brush.Accent" Color="#34C759"/>
-        <SolidColorBrush x:Key="Brush.AccentHover" Color="#40D965"/>
-        <SolidColorBrush x:Key="Brush.AccentPressed" Color="#28A745"/>
-        <SolidColorBrush x:Key="Brush.IconTint" Color="#64D2FF"/>
+        <!-- 팔레트(배경·텍스트·액센트 등)는 Themes/Dark.xaml · Themes/Light.xaml (App 전역, ThemeManager가 교체) -->
 
         <!-- 프로세스 막대: 도넛 게이지와 동일 히트 스펙트럼(초록→노랑→주황→빨강), 빈 칸은 어두운 회색(순검정 아님) -->
         <LinearGradientBrush x:Key="Brush.MemoryGaugeHeatGradient" StartPoint="0,0.5" EndPoint="1,0.5">
@@ -54,8 +41,8 @@
             <GradientStop Color="#FF453A" Offset="1"/>
         </LinearGradientBrush>
         <Style x:Key="MemoryGaugeBar" TargetType="ProgressBar">
-            <Setter Property="Foreground" Value="{StaticResource Brush.MemoryGaugeHeatGradient}"/>
-            <Setter Property="Background" Value="#4C4C54"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.MemoryGaugeHeatGradient}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.ProgressTrack}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Height" Value="22"/>
             <Setter Property="Minimum" Value="0"/>
@@ -63,62 +50,62 @@
         </Style>
 
         <Style x:Key="Text.SectionTitle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
         <Style x:Key="Text.SectionSubtitle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
         </Style>
         <Style x:Key="Text.Body" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
         </Style>
         <Style x:Key="Text.Caption" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="Medium"/>
         </Style>
         <Style x:Key="Text.Overline" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
             <Setter Property="FontSize" Value="9"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
 
         <Style x:Key="PanelBorder" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Brush.PanelBg}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.PanelBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="14"/>
         </Style>
         <Style x:Key="Text.SpecHeader" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="ResourceLabel" TargetType="TextBlock" BasedOn="{StaticResource Text.Caption}">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,12,0"/>
         </Style>
         <Style x:Key="ResourceValue" TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="Text.GaugeCaption" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
@@ -126,7 +113,7 @@
 
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="{StaticResource Brush.Accent}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,12"/>
             <Setter Property="FontSize" Value="12"/>
@@ -145,10 +132,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentHover}"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.AccentHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentPressed}"/>
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.AccentPressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
@@ -161,16 +148,16 @@
 
         <!-- 도움말: 호버 중에만 표시(타임아웃 방지로 충분히 긴 표시 시간) -->
         <Style x:Key="HelpTooltipStyle" TargetType="ToolTip">
-            <Setter Property="Background" Value="{StaticResource Brush.PanelBgElevated}"/>
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBgElevated}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.PanelBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="MaxWidth" Value="304"/>
         </Style>
 
         <Style x:Key="HelpIconHost" TargetType="Border">
-            <Setter Property="Background" Value="#26FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.HelpIconBg}"/>
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="5,3"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -183,15 +170,15 @@
             <Setter Property="ToolTipService.VerticalOffset" Value="4"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#40FFFFFF"/>
+                    <Setter Property="Background" Value="{DynamicResource Brush.HelpIconBgHover}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="ProcessToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}"/>
-            <Setter Property="Background" Value="{StaticResource Brush.PanelBgElevated}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Brush.PanelBorder}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBgElevated}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.PanelBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="12,8"/>
             <Setter Property="FontSize" Value="11"/>
@@ -208,14 +195,44 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#353539"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Brush.Accent}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Brush.SurfacePressed}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#38383C"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Brush.SurfaceHover}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 테마 전환(다크/라이트) 아이콘 버튼 -->
+        <Style x:Key="ThemeToggleButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelBgElevated}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.PanelBorder}"/>
+            <Setter Property="Width" Value="42"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" CornerRadius="10" BorderThickness="1"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfaceHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.SurfacePressed}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -238,7 +255,7 @@
         <!-- 헤더: UPM · Universal PC Manager | 빠른 최적화 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,14" LastChildFill="False">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                <Image gif:ImageBehavior.AnimatedSource="pack://application:,,,/Assets/upm_in_window.gif" Height="48" VerticalAlignment="Center" Stretch="Uniform"/>
+                <Image x:Name="AppLogoImage" gif:ImageBehavior.AnimatedSource="pack://application:,,,/Assets/upm_logo_dark.gif" Height="48" VerticalAlignment="Center" Stretch="Uniform"/>
             </StackPanel>
             <Button x:Name="BoostButton" DockPanel.Dock="Right" VerticalAlignment="Center"
                     Style="{StaticResource PrimaryButton}" MinWidth="148"
@@ -258,6 +275,12 @@
                     <TextBlock Text="화이트리스트" Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
+            <Button x:Name="ThemeToggleButton" DockPanel.Dock="Right" VerticalAlignment="Center"
+                    Style="{StaticResource ThemeToggleButton}" Margin="0,0,10,0"
+                    Click="ThemeToggleButton_Click">
+                <TextBlock x:Name="ThemeToggleIcon" FontFamily="Segoe MDL2 Assets" Text="&#xE706;" FontSize="16"
+                           Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center"/>
+            </Button>
         </DockPanel>
 
         <!-- 실시간 게이지 -->
@@ -265,7 +288,7 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                     <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE9D9;" FontSize="18"
-                               Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Top" Margin="0,0,10,0"/>
+                               Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Top" Margin="0,0,10,0"/>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="실시간 모니터" Style="{StaticResource Text.SectionTitle}" VerticalAlignment="Center"/>
@@ -274,20 +297,20 @@
                                     <ToolTip Style="{StaticResource HelpTooltipStyle}">
                                         <StackPanel>
                                             <TextBlock Text="숫자 읽는 법" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,8"/>
-                                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource Brush.TextSecondary}" LineHeight="18"
+                                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" LineHeight="18"
                                                        Text="CPU·메모리·GPU 원은 사용률(%)입니다. GPU 오른쪽은 칩 온도(°C)입니다. 아래 목록의 막대는 각 프로세스가 현재 사용 중인 RAM에서 차지하는 비율입니다."/>
                                         </StackPanel>
                                     </ToolTip>
                                 </Border.ToolTip>
                                 <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE946;" FontSize="13"
-                                           Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Center"/>
                             </Border>
                         </StackPanel>
                         <TextBlock Text="CPU · 메모리 · GPU 사용률과 온도" Style="{StaticResource Text.SectionSubtitle}"/>
                     </StackPanel>
                 </StackPanel>
                 <UniformGrid Rows="1" Columns="3">
-                    <Border Background="{StaticResource Brush.PanelBgElevated}" CornerRadius="10" Padding="8,8,8,10" Margin="0,0,6,0">
+                    <Border Background="{DynamicResource Brush.PanelBgElevated}" CornerRadius="10" Padding="8,8,8,10" Margin="0,0,6,0">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <Grid Width="148" Height="148">
                                 <lvc:PieChart Series="{Binding CpuGauge}"
@@ -296,7 +319,7 @@
                                               Width="148" Height="148"
                                               TooltipPosition="Hidden" IsHitTestVisible="False"/>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           FontSize="34" FontWeight="SemiBold" Foreground="White"
+                                           FontSize="34" FontWeight="SemiBold" Foreground="{DynamicResource Brush.GaugeValueText}"
                                            IsHitTestVisible="False"
                                            Text="{Binding CpuValue.Value, StringFormat={}{0:0}%}"/>
                             </Grid>
@@ -306,7 +329,7 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <Border Background="{StaticResource Brush.PanelBgElevated}" CornerRadius="10" Padding="8,8,8,10" Margin="3,0">
+                    <Border Background="{DynamicResource Brush.PanelBgElevated}" CornerRadius="10" Padding="8,8,8,10" Margin="3,0">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <Grid Width="148" Height="148">
                                 <lvc:PieChart Series="{Binding RamGauge}"
@@ -315,7 +338,7 @@
                                               Width="148" Height="148"
                                               TooltipPosition="Hidden" IsHitTestVisible="False"/>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           FontSize="34" FontWeight="SemiBold" Foreground="White"
+                                           FontSize="34" FontWeight="SemiBold" Foreground="{DynamicResource Brush.GaugeValueText}"
                                            IsHitTestVisible="False"
                                            Text="{Binding RamValue.Value, StringFormat={}{0:0}%}"/>
                             </Grid>
@@ -325,7 +348,7 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <Border Background="{StaticResource Brush.PanelBgElevated}" CornerRadius="10" Padding="8,8,8,10" Margin="6,0,0,0">
+                    <Border Background="{DynamicResource Brush.PanelBgElevated}" CornerRadius="10" Padding="8,8,8,10" Margin="6,0,0,0">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <Grid HorizontalAlignment="Center">
                                 <Grid.ColumnDefinitions>
@@ -339,26 +362,26 @@
                                                   Width="148" Height="148"
                                                   TooltipPosition="Hidden" IsHitTestVisible="False"/>
                                     <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               FontSize="34" FontWeight="SemiBold" Foreground="White"
+                                               FontSize="34" FontWeight="SemiBold" Foreground="{DynamicResource Brush.GaugeValueText}"
                                                IsHitTestVisible="False"
                                                Text="{Binding GpuValue.Value, StringFormat={}{0:0}%}"/>
                                 </Grid>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,0,0">
-                                    <Border HorizontalAlignment="Center" Background="{StaticResource Brush.PanelBg}"
-                                            CornerRadius="10" Padding="10,10,10,8" BorderBrush="{StaticResource Brush.PanelBorder}"
+                                    <Border HorizontalAlignment="Center" Background="{DynamicResource Brush.PanelBg}"
+                                            CornerRadius="10" Padding="10,10,10,8" BorderBrush="{DynamicResource Brush.PanelBorder}"
                                             BorderThickness="1">
                                         <Grid Width="48" Height="58" HorizontalAlignment="Center" SnapsToDevicePixels="True">
                                             <!-- 빈 유리관 느낌 -->
                                             <Image Width="48" Height="58" Stretch="Uniform"
                                                    RenderOptions.BitmapScalingMode="HighQuality"
-                                                   Source="/Assets/GpuTemperatureIcon.png"
+                                                   Source="/Assets/gpu_temperature_icon.png"
                                                    Opacity="0.22"/>
                                             <!-- 고정 크기 그라데이션 + 하단에서 위로 Clip + 실루엣 OpacityMask -->
                                             <Rectangle Width="48" Height="58"
-                                                       Fill="{StaticResource Brush.ThermometerVerticalHeat}"
+                                                       Fill="{DynamicResource Brush.ThermometerVerticalHeat}"
                                                        Clip="{Binding GpuTemperatureCelsius.Value, Converter={StaticResource GpuThermoClipConverter}, ConverterParameter='48,58'}">
                                                 <Rectangle.OpacityMask>
-                                                    <ImageBrush ImageSource="/Assets/GpuTemperatureIcon.png"
+                                                    <ImageBrush ImageSource="/Assets/gpu_temperature_icon.png"
                                                                 Stretch="Uniform" AlignmentX="Center" AlignmentY="Center"/>
                                                 </Rectangle.OpacityMask>
                                             </Rectangle>
@@ -366,7 +389,7 @@
                                     </Border>
                                     <TextBlock Margin="0,8,0,0" HorizontalAlignment="Center"
                                                FontSize="13" FontWeight="SemiBold"
-                                               Foreground="{StaticResource Brush.TextSecondary}"
+                                               Foreground="{DynamicResource Brush.TextSecondary}"
                                                Text="{Binding GpuTemperatureCelsius.Value, StringFormat={}{0:0}°C}"/>
                                 </StackPanel>
                             </Grid>
@@ -397,7 +420,7 @@
                                   Unchecked="DetailExpandToggle_OnUnchecked"/>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE770;" FontSize="18"
-                                   Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                   Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="하드웨어 및 메모리" Style="{StaticResource Text.SectionTitle}"/>
                             <TextBlock Text="자세히 보기에서 사양과 메모리 상위 프로세스를 확인합니다" Style="{StaticResource Text.SectionSubtitle}" Margin="0,2,0,0"/>
@@ -420,7 +443,7 @@
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE770;" FontSize="18"
-                                   Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Top" Margin="0,0,10,0"/>
+                                   Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Top" Margin="0,0,10,0"/>
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="시스템 사양" Style="{StaticResource Text.SectionTitle}" VerticalAlignment="Center"/>
@@ -429,13 +452,13 @@
                                         <ToolTip Style="{StaticResource HelpTooltipStyle}">
                                             <StackPanel>
                                                 <TextBlock Text="이 표는 무엇인가요?" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,8"/>
-                                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource Brush.TextSecondary}" LineHeight="18"
+                                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" LineHeight="18"
                                                            Text="CPU는 계산을 담당하는 ‘두뇌’, GPU는 화면·게임 등 그래픽 처리, RAM(메모리)은 프로그램을 올려 두는 작업 공간, 메인보드는 부품들을 연결하는 기판입니다. 여기 적힌 이름은 업그레이드나 AS 문의 시 그대로 알려 주면 됩니다."/>
                                             </StackPanel>
                                         </ToolTip>
                                     </Border.ToolTip>
                                     <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE946;" FontSize="13"
-                                               Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Center"/>
                                 </Border>
                             </StackPanel>
                             <TextBlock Text="이 PC의 주요 하드웨어 요약" Style="{StaticResource Text.SectionSubtitle}"/>
@@ -454,7 +477,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{StaticResource Brush.PanelBgElevated}" CornerRadius="8" Padding="10,9" Margin="0,0,0,10">
+                        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource Brush.PanelBgElevated}" CornerRadius="8" Padding="10,9" Margin="0,0,0,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="76"/>
@@ -465,7 +488,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{StaticResource Brush.RowStripe}" CornerRadius="8" Padding="10,9" Margin="0,0,0,6">
+                        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{DynamicResource Brush.RowStripe}" CornerRadius="8" Padding="10,9" Margin="0,0,0,6">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="76"/>
@@ -485,7 +508,7 @@
                                 <TextBlock x:Name="GpuNameText" Grid.Column="1" Text="불러오는 중…" Style="{StaticResource ResourceValue}" Margin="0"/>
                             </Grid>
                         </Border>
-                        <Border Grid.Row="3" Grid.ColumnSpan="2" Background="{StaticResource Brush.RowStripe}" CornerRadius="8" Padding="10,9" Margin="0,0,0,6">
+                        <Border Grid.Row="3" Grid.ColumnSpan="2" Background="{DynamicResource Brush.RowStripe}" CornerRadius="8" Padding="10,9" Margin="0,0,0,6">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="76"/>
@@ -508,14 +531,14 @@
                     </Grid>
                 </Grid>
 
-                <Rectangle Grid.Column="1" Width="1" Fill="{StaticResource Brush.PanelBorder}" VerticalAlignment="Stretch" Margin="6,0"/>
+                <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource Brush.PanelBorder}" VerticalAlignment="Stretch" Margin="6,0"/>
 
                 <!-- 메모리 사용 상위 -->
                 <StackPanel Grid.Column="2" Margin="10,0,0,0">
                     <DockPanel Margin="0,0,0,10" LastChildFill="False">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FD;" FontSize="18"
-                                       Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Top" Margin="0,0,10,0"/>
+                                       Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Top" Margin="0,0,10,0"/>
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="메모리 사용 상위" Style="{StaticResource Text.SectionTitle}" VerticalAlignment="Center"/>
@@ -524,13 +547,13 @@
                                             <ToolTip Style="{StaticResource HelpTooltipStyle}">
                                                 <StackPanel>
                                                     <TextBlock Text="프로세스 제어 &amp; 서버 동기화" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,8"/>
-                                                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource Brush.TextSecondary}" LineHeight="18"
+                                                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Brush.TextSecondary}" LineHeight="18"
                                                                Text="RAM 점유율 상위 프로세스입니다. [보호]를 체크하면 최적화 시 종료 대상에서 제외(서버 DB 동기화)되며, [선택 종료 모드]에서는 선택 항목만 종료됩니다. 오른쪽 [종료] 버튼으로 직접 개별 프로세스를 닫을 수도 있습니다."/>
                                                 </StackPanel>
                                             </ToolTip>
                                         </Border.ToolTip>
                                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE946;" FontSize="13"
-                                                   Foreground="{StaticResource Brush.IconTint}" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource Brush.IconTint}" VerticalAlignment="Center"/>
                                     </Border>
                                 </StackPanel>
                                 <TextBlock Text="작업 관리자와 유사한 순위입니다" Style="{StaticResource Text.SectionSubtitle}" Margin="0,2,0,0"/>
@@ -550,7 +573,7 @@
                         </StackPanel>
                     </DockPanel>
 
-                    <Border Background="{StaticResource Brush.PanelBgElevated}" CornerRadius="8" Padding="10,8" Margin="0,0,0,8">
+                    <Border Background="{DynamicResource Brush.PanelBgElevated}" CornerRadius="8" Padding="10,8" Margin="0,0,0,8">
                         <Grid x:Name="ProcessListHeader">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="24"/>
@@ -561,7 +584,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="1" Text="프로세스" Style="{StaticResource Text.Overline}"/>
                             <TextBlock Grid.Column="2" Text="사용 중 RAM" Style="{StaticResource Text.Overline}" HorizontalAlignment="Right" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="3" Text="보호" Style="{StaticResource Text.Overline}" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="ProcessCheckColumnHeader" Grid.Column="3" Text="보호" Style="{StaticResource Text.Overline}" HorizontalAlignment="Center"/>
                             <TextBlock Grid.Column="4" Text="제어" Style="{StaticResource Text.Overline}" HorizontalAlignment="Center"/>
                         </Grid>
                     </Border>
@@ -586,7 +609,7 @@
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="ItemsControl.AlternationIndex" Value="1">
-                                                        <Setter TargetName="RowBg" Property="Background" Value="{StaticResource Brush.RowStripe}"/>
+                                                        <Setter TargetName="RowBg" Property="Background" Value="{DynamicResource Brush.RowStripe}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -617,7 +640,7 @@
                                                    SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
 
                                             <!-- 프로세스명 (그룹화 시 수량 표시) -->
-                                            <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="{StaticResource Brush.TextPrimary}" FontSize="11"
+                                            <TextBlock Grid.Column="1" Text="{Binding DisplayName}" Foreground="{DynamicResource Brush.TextPrimary}" FontSize="11"
                                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="6,0,6,0"/>
 
                                             <!-- RAM 점유 게이지 및 MB -->
@@ -635,25 +658,53 @@
                                                     </TextBlock>
                                                 </Grid>
                                                 <TextBlock Text="{Binding MemoryWorkingSetBytes, Converter={StaticResource WsMbConverter}}"
-                                                           FontSize="9" Foreground="{StaticResource Brush.TextMuted}"
+                                                           FontSize="9" Foreground="{DynamicResource Brush.TextMuted}"
                                                            HorizontalAlignment="Right" Margin="0,2,0,0"/>
                                             </StackPanel>
 
-                                            <!-- 보호 (예외 목록 등록) 체크박스 -->
-                                            <CheckBox Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                      IsChecked="{Binding IsProtected, Mode=TwoWay}"
-                                                      ToolTip="체크 시 자동 종료 최적화 대상에서 항상 제외 (서버 DB 동기화)"
-                                                      Click="ProcessProtection_Click">
-                                                <CheckBox.Style>
-                                                    <Style TargetType="CheckBox">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsSystemCritical}" Value="True">
-                                                                <Setter Property="IsEnabled" Value="False"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </CheckBox.Style>
-                                            </CheckBox>
+                                            <!-- 보호 (자동 종료 모드) / 선택 (선택 종료 모드) 체크박스 -->
+                                            <Grid Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <CheckBox VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                          IsChecked="{Binding IsProtected, Mode=TwoWay}"
+                                                          ToolTip="체크 시 자동 종료 최적화 대상에서 항상 제외 (서버 DB 동기화)"
+                                                          Click="ProcessProtection_Click">
+                                                    <CheckBox.Style>
+                                                        <Style TargetType="CheckBox">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsChecked, ElementName=AutoCloseModeToggle}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsSystemCritical}" Value="True">
+                                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </CheckBox.Style>
+                                                </CheckBox>
+
+                                                <CheckBox VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                          IsChecked="{Binding IsSelectedForKill, Mode=TwoWay}"
+                                                          ToolTip="체크 시 [빠른 최적화] 실행 때 이 프로세스를 종료합니다"
+                                                          Click="ProcessKillSelection_Click">
+                                                    <CheckBox.Style>
+                                                        <Style TargetType="CheckBox">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsChecked, ElementName=AutoCloseModeToggle}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsSystemCritical}" Value="True">
+                                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsProtected}" Value="True">
+                                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </CheckBox.Style>
+                                                </CheckBox>
+                                            </Grid>
 
                                             <!-- 개별 종료 버튼 -->
                                             <Button Grid.Column="4" Content="종료" FontSize="10" Padding="6,2" VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -662,8 +713,8 @@
                                                     ToolTip="이 프로세스를 즉시 종료합니다">
                                                 <Button.Style>
                                                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-                                                        <Setter Property="Background" Value="#3D2424"/>
-                                                        <Setter Property="Foreground" Value="#FF6B6B"/>
+                                                        <Setter Property="Background" Value="{DynamicResource Brush.DangerBg}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.DangerText}"/>
                                                         <Setter Property="Padding" Value="6,2"/>
                                                         <Setter Property="Height" Value="20"/>
                                                         <Setter Property="MinWidth" Value="42"/>
@@ -673,8 +724,8 @@
                                                                 <Setter Property="Opacity" Value="0.3"/>
                                                             </DataTrigger>
                                                             <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter Property="Background" Value="#5A2828"/>
-                                                                <Setter Property="Foreground" Value="#FF8888"/>
+                                                                <Setter Property="Background" Value="{DynamicResource Brush.DangerBgHover}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.DangerTextHover}"/>
                                                             </Trigger>
                                                         </Style.Triggers>
                                                     </Style>

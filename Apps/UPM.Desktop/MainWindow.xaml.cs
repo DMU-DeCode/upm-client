@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using UPM.Core;
 using UPM.Communication;
@@ -20,6 +22,7 @@ namespace UPM.Desktop
         private readonly MobileControlHttpServer _controlServer;
         private readonly string _machineId = Environment.MachineName;
         private int _tickCounter = 0;
+        private bool _isTicking = false;
         private DashboardViewModel? _viewModel;
 
         public MainWindow()
@@ -29,6 +32,10 @@ namespace UPM.Desktop
 
             // ViewModel 참조 가져오기
             _viewModel = DataContext as DashboardViewModel;
+
+            // 테마: 현재 테마 반영 + 변경 구독
+            ApplyThemeVisuals();
+            ThemeManager.ThemeChanged += OnThemeChanged;
 
             // 1. 수집 엔진 및 서버 클라이언트 초기화
             _monitor = new HardwareMonitor();
@@ -45,23 +52,25 @@ namespace UPM.Desktop
             }
 
             // 2. 초기 1회 하드웨어 사양 로드 및 서버 예외 목록 수신
-            LoadHardwareSpecs();
+            _ = LoadHardwareSpecsAsync();
 
             // 로컬 화이트리스트 즉시 반영 (서버 응답 전 최적화 실행 시 보호 보장)
-            var localWhitelist = UPM.Core.LocalWhitelistStore.Load();
+            var localWhitelist = LocalWhitelistStore.Load();
             if (localWhitelist.Count > 0)
                 _monitor.SetUserExceptions(localWhitelist);
 
             _ = LoadServerExceptionsAsync();
 
             // 3. 실시간 업데이트 타이머 시작
-            _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromSeconds(1);
+            _timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
             _timer.Tick += Timer_Tick;
             _timer.Start();
         }
 
-        private async System.Threading.Tasks.Task LoadServerExceptionsAsync()
+        private async Task LoadServerExceptionsAsync()
         {
             try
             {
@@ -70,14 +79,14 @@ namespace UPM.Desktop
                 {
                     _monitor.SetUserExceptions(exceptions);
                     // 서버 성공 시 로컬에도 동기화
-                    UPM.Core.LocalWhitelistStore.Save(exceptions);
+                    LocalWhitelistStore.Save(exceptions);
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UPM] 서버 예외 목록 로드 실패, 로컬 폴백: {ex.Message}");
                 // 서버 연결 실패 시 로컬 화이트리스트에서 로드
-                var localList = UPM.Core.LocalWhitelistStore.Load();
+                var localList = LocalWhitelistStore.Load();
                 if (localList.Count > 0)
                 {
                     _monitor.SetUserExceptions(localList);
@@ -90,11 +99,11 @@ namespace UPM.Desktop
             RefreshWindowHeightToContent();
         }
 
-        private void LoadHardwareSpecs()
+        private async Task LoadHardwareSpecsAsync()
         {
             try
             {
-                var specs = _monitor.GetHardwareSpecs();
+                var specs = await Task.Run(() => _monitor.GetHardwareSpecs());
 
                 // UI 업데이트 (이름이 부여된 TextBlock 제어)
                 CpuNameText.Text = specs.CpuName;
@@ -110,42 +119,47 @@ namespace UPM.Desktop
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
-            // 실시간 데이터 수집
-            var status = _monitor.GetCurrentStatus();
+            if (_isTicking) return;
+            _isTicking = true;
 
-            // MachineId 설정
-            status.MachineId = _machineId;
-
-            // ViewModel 업데이트 (게이지 수치 · 호 방향 색 조각)
-            if (_viewModel != null)
+            try
             {
-                var cpu = status.CpuUsagePercent;
-                var ram = status.RamUsagePercent;
-                var gpuUsage = status.GpuUsagePercent;
-                var gpuC = status.GpuTemperatureCelsius;
+                // 무거운 프로세스/센서 수집은 백그라운드 스레드에서 실행하여 UI 프리징 방지
+                var status = await Task.Run(() => _monitor.GetCurrentStatus());
+                status.MachineId = _machineId;
 
-                _viewModel.ApplyCpuGauge(cpu);
-                _viewModel.ApplyRamGauge(ram);
-                _viewModel.ApplyGpuGauge(gpuUsage, gpuC);
+                // ViewModel 업데이트 (게이지 수치 · 호 방향 색 조각)
+                if (_viewModel != null)
+                {
+                    var cpu = status.CpuUsagePercent;
+                    var ram = status.RamUsagePercent;
+                    var gpuUsage = status.GpuUsagePercent;
+                    var gpuC = status.GpuTemperatureCelsius;
 
-                ApplyGaugeHeatDots(cpu, ram, gpuUsage);
+                    _viewModel.ApplyCpuGauge(cpu);
+                    _viewModel.ApplyRamGauge(ram);
+                    _viewModel.ApplyGpuGauge(gpuUsage, gpuC);
+
+                    ApplyGaugeHeatDots(cpu, ram, gpuUsage);
+                }
+
+                TopProcessItems.ItemsSource = status.TopProcesses;
+
+                // 5초마다 서버로 상태 정보 전송
+                _tickCounter++;
+                if (_tickCounter >= 5)
+                {
+                    _tickCounter = 0;
+                    _ = _apiClient.SendSystemStatusAsync(status);
+                }
             }
-
-            TopProcessItems.ItemsSource = status.TopProcesses;
-
-            // 5초마다 서버로 상태 정보 전송
-            _tickCounter++;
-            if (_tickCounter >= 5)
+            catch (Exception ex)
             {
-                _tickCounter = 0;
-                try
-                {
-                    await _apiClient.SendSystemStatusAsync(status);
-                }
-                catch
-                {
-                    // 서버 연결 실패 시 무시
-                }
+                System.Diagnostics.Debug.WriteLine($"[UPM] 타이머 수집 오류: {ex.Message}");
+            }
+            finally
+            {
+                _isTicking = false;
             }
         }
 
@@ -205,6 +219,8 @@ namespace UPM.Desktop
             _monitor.AutoCloseMode = isAuto;
             AutoCloseModeLabel.Text = isAuto ? "자동 종료 모드" : "선택 종료 모드";
             AutoCloseModeIcon.Text = isAuto ? "\uE945" : "\uE762";
+            if (ProcessCheckColumnHeader != null)
+                ProcessCheckColumnHeader.Text = isAuto ? "보호" : "선택";
         }
 
         private async void ProcessProtection_Click(object sender, RoutedEventArgs e)
@@ -213,10 +229,22 @@ namespace UPM.Desktop
             {
                 bool isProtected = _monitor.ToggleProcessProtection(proc.ProcessName);
                 proc.IsProtected = isProtected;
+                if (isProtected)
+                    proc.IsSelectedForKill = false;
 
                 // 서버 DB 동기화
                 string action = isProtected ? "add" : "remove";
                 await _apiClient.UpdateUserExceptionAsync(_machineId, proc.ProcessName, action);
+            }
+        }
+
+        private void ProcessKillSelection_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox cb && cb.DataContext is ProcessInfoModel proc)
+            {
+                bool selected = cb.IsChecked == true;
+                _monitor.SetProcessSelectedForKill(proc.ProcessName, selected);
+                proc.IsSelectedForKill = selected;
             }
         }
 
@@ -275,7 +303,7 @@ namespace UPM.Desktop
 
             var currentProcesses = TopProcessItems.ItemsSource as List<ProcessInfoModel>;
             // 백그라운드 스레드에서 실행하여 UI 스레드 블로킹 및 앱 크래시 방지
-            int count = await System.Threading.Tasks.Task.Run(async () =>
+            int count = await Task.Run(async () =>
                 await _monitor.OptimizeSystemAsync(_apiClient, _machineId, currentProcesses));
 
             MessageBox.Show($"{count}개의 프로세스를 정리했습니다.", "최적화 완료", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -284,18 +312,58 @@ namespace UPM.Desktop
             BoostButtonLabel.Text = "빠른 최적화";
             BoostButtonIcon.Visibility = Visibility.Visible;
         }
-        private void WhitelistButton_Click(object sender, RoutedEventArgs e)
+
+        private async void WhitelistButton_Click(object sender, RoutedEventArgs e)
         {
-            // 화이트리스트에는 상위 8개가 아닌 현재 실행 중인 모든 프로세스를 전달
-            var allProcesses = _monitor.GetAllRunningProcesses();
-            // _monitor를 전달하여 화이트리스트 변경 시 인메모리 예외 목록도 즉시 갱신
-            var whitelistWindow = new WhitelistWindow(_apiClient, _machineId, allProcesses, _monitor);
-            whitelistWindow.Owner = this;
-            whitelistWindow.ShowDialog();
+            WhitelistButton.IsEnabled = false;
+            try
+            {
+                // 화이트리스트에는 상위 8개가 아닌 현재 실행 중인 모든 프로세스를 백그라운드에서 수집하여 전달
+                var allProcesses = await Task.Run(() => _monitor.GetAllRunningProcesses());
+                // _monitor를 전달하여 화이트리스트 변경 시 인메모리 예외 목록도 즉시 갱신
+                var whitelistWindow = new WhitelistWindow(_apiClient, _machineId, allProcesses, _monitor)
+                {
+                    Owner = this
+                };
+                whitelistWindow.ShowDialog();
+            }
+            finally
+            {
+                WhitelistButton.IsEnabled = true;
+            }
+        }
+
+        private void ThemeToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            ThemeManager.Toggle();
+        }
+
+        private void OnThemeChanged(object? sender, EventArgs e) => ApplyThemeVisuals();
+
+        /// <summary>XAML 동적 리소스로 처리되지 않는 부분(테마 버튼 아이콘, LiveCharts 트랙 색, 테마별 로고) 동기화.</summary>
+        private void ApplyThemeVisuals()
+        {
+            bool isDark = ThemeManager.Current == AppTheme.Dark;
+            // 다크일 때는 해(→라이트로), 라이트일 때는 달(→다크로)
+            ThemeToggleIcon.Text = isDark ? "\uE706" : "\uE708";
+            ThemeToggleButton.ToolTip = isDark ? "라이트 테마로 전환" : "다크 테마로 전환";
+
+            if (AppLogoImage != null)
+            {
+                var uri = isDark
+                    ? new Uri("pack://application:,,,/Assets/upm_logo_dark.gif", UriKind.Absolute)
+                    : new Uri("pack://application:,,,/Assets/upm_logo_light.png", UriKind.Absolute);
+                var bitmap = new BitmapImage(uri);
+                WpfAnimatedGif.ImageBehavior.SetAnimatedSource(AppLogoImage, bitmap);
+            }
+
+            var c = ThemeManager.GetColor("Color.ArcTrack", Color.FromRgb(76, 78, 86));
+            _viewModel?.ApplyTrackColor(new SkiaSharp.SKColor(c.R, c.G, c.B, c.A));
         }
 
         protected override void OnClosed(EventArgs e)
         {
+            ThemeManager.ThemeChanged -= OnThemeChanged;
             _timer.Stop();
             _controlServer.Dispose();
             _apiClient.Dispose();

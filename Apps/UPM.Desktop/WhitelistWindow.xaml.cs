@@ -66,7 +66,7 @@ namespace UPM.Desktop
             SetBusy(true);
             try
             {
-                var exceptions = await _apiClient.GetExceptionsAsync(_machineId)
+                var exceptions = await _apiClient.GetUserExceptionsAsync(_machineId)
                     .ConfigureAwait(false);
                 await Dispatcher.InvokeAsync(() =>
                 {
