@@ -21,6 +21,9 @@ namespace UPM.Desktop
         private readonly ApiServerClient _apiClient;
         private readonly MobileControlHttpServer _controlServer;
         private readonly string _machineId = Environment.MachineName;
+
+        // 최근 수집한 상위 프로세스 목록. 모바일 최적화 요청(백그라운드 스레드)에서 UI 컨트롤 대신 사용합니다.
+        private volatile List<ProcessInfoModel>? _latestTopProcesses;
         private int _tickCounter = 0;
         private bool _isTicking = false;
         private DashboardViewModel? _viewModel;
@@ -41,7 +44,7 @@ namespace UPM.Desktop
             _monitor = new HardwareMonitor();
             _apiClient = new ApiServerClient(UpmAppSettings.MetricsServerBaseUrl);
 
-            _controlServer = new MobileControlHttpServer(_monitor);
+            _controlServer = new MobileControlHttpServer(_monitor, optimizeHandler: RunMobileOptimizeAsync);
             try
             {
                 _controlServer.Start();
@@ -144,6 +147,7 @@ namespace UPM.Desktop
                 }
 
                 TopProcessItems.ItemsSource = status.TopProcesses;
+                _latestTopProcesses = status.TopProcesses;
 
                 // 5초마다 서버로 상태 정보 전송
                 _tickCounter++;
@@ -293,6 +297,15 @@ namespace UPM.Desktop
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 모바일 앱의 "최적화 실행" 요청 처리. PC의 빠른 최적화 버튼과 같은 경로(서버 분석 → 종료 → 이력 보고)를 씁니다.
+        /// </summary>
+        private Task<int> RunMobileOptimizeAsync()
+        {
+            var processes = _latestTopProcesses;
+            return Task.Run(async () => await _monitor.OptimizeSystemAsync(_apiClient, _machineId, processes));
         }
 
         private async void BoostButton_Click(object sender, RoutedEventArgs e)
