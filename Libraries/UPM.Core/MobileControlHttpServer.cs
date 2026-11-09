@@ -14,13 +14,22 @@ public sealed class MobileControlHttpServer : IDisposable
     private readonly HttpListener _listener;
     private readonly HardwareMonitor _monitor;
     private readonly int _port;
+    private readonly Func<Task<int>>? _optimizeHandler;
     private readonly CancellationTokenSource _cts = new();
     private Task? _listenTask;
 
-    public MobileControlHttpServer(HardwareMonitor monitor, int port = UpmAppSettings.MobileControlPort)
+    /// <param name="optimizeHandler">
+    /// 모바일의 최적화 요청 때 실행할 동작. 주면 PC의 "빠른 최적화" 버튼과 같은 경로(서버 분석 → 종료)를 쓰고,
+    /// 비워 두면 기존처럼 <see cref="HardwareMonitor.OptimizeSystem"/> 을 실행합니다.
+    /// </param>
+    public MobileControlHttpServer(
+        HardwareMonitor monitor,
+        int port = UpmAppSettings.MobileControlPort,
+        Func<Task<int>>? optimizeHandler = null)
     {
         _monitor = monitor;
         _port = port;
+        _optimizeHandler = optimizeHandler;
         _listener = new HttpListener();
         _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
     }
@@ -96,7 +105,9 @@ public sealed class MobileControlHttpServer : IDisposable
                 path.Equals("/optimize", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.WriteLine("[UPM] 모바일 최적화 신호 수신");
-                var cleared = _monitor.OptimizeSystem();
+                var cleared = _optimizeHandler != null
+                    ? await _optimizeHandler()
+                    : _monitor.OptimizeSystem();
                 await WriteJsonAsync(response, HttpStatusCode.OK, new
                 {
                     status = "success",
