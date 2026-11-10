@@ -19,6 +19,8 @@ public class ApiServerClient : IDisposable
             // 서버 미연결 또는 느린 응답 시 무기한 대기 방지
             Timeout = TimeSpan.FromSeconds(8)
         };
+        // ngrok 무료 도메인 사용 시 브라우저 경고 페이지 우회
+        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("ngrok-skip-browser-warning", "true");
     }
 
     /// <summary>실시간 시스템 상태를 <c>POST /api/v1/metrics</c> 로 전송합니다.</summary>
@@ -33,6 +35,29 @@ public class ApiServerClient : IDisposable
         {
             Debug.WriteLine($"[UPM] Metrics 전송 실패: {ex.Message}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// 실시간 시스템 상태를 <c>POST /api/v1/metrics</c> 로 전송하고,
+    /// 서버에 대기 중인 원격 명령(<c>pendingCommand</c>: optimize / shutdown / restart)이 있으면 함께 수신합니다.
+    /// (외부 망에서 서버가 PC의 8787 포트로 직접 접근할 수 없을 때 피기백 제어용)
+    /// </summary>
+    public async Task<string?> SendSystemStatusWithCommandAsync(SystemStatusModel status)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/api/v1/metrics", status);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var body = await response.Content.ReadFromJsonAsync<MetricsResponse>();
+            return string.IsNullOrWhiteSpace(body?.PendingCommand) ? null : body.PendingCommand.Trim();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[UPM] Metrics 전송 실패: {ex.Message}");
+            return null;
         }
     }
 
@@ -128,5 +153,14 @@ public class ApiServerClient : IDisposable
     {
         [JsonPropertyName("killList")]
         public List<string>? KillList { get; set; }
+    }
+
+    private sealed class MetricsResponse
+    {
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+
+        [JsonPropertyName("pendingCommand")]
+        public string? PendingCommand { get; set; }
     }
 }

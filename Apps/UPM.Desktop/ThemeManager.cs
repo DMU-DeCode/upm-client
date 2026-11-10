@@ -108,6 +108,7 @@ namespace UPM.Desktop
         private sealed class Settings
         {
             public string? Theme { get; set; }
+            public string? ServerUrl { get; set; }
         }
 
         private static AppTheme LoadSavedTheme()
@@ -116,7 +117,9 @@ namespace UPM.Desktop
             {
                 if (File.Exists(_settingsPath))
                 {
-                    var s = JsonSerializer.Deserialize<Settings>(File.ReadAllText(_settingsPath));
+                    var s = JsonSerializer.Deserialize<Settings>(
+                        File.ReadAllText(_settingsPath),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                     if (Enum.TryParse<AppTheme>(s?.Theme, ignoreCase: true, out var t))
                         return t;
                 }
@@ -132,8 +135,25 @@ namespace UPM.Desktop
         {
             try
             {
+                string? existingServerUrl = null;
+                if (File.Exists(_settingsPath))
+                {
+                    try
+                    {
+                        var existing = JsonSerializer.Deserialize<Settings>(
+                            File.ReadAllText(_settingsPath),
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        existingServerUrl = existing?.ServerUrl;
+                    }
+                    catch { /* ignore */ }
+                }
+
                 Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
-                File.WriteAllText(_settingsPath, JsonSerializer.Serialize(new Settings { Theme = theme.ToString() }));
+                File.WriteAllText(_settingsPath, JsonSerializer.Serialize(new Settings
+                {
+                    Theme = theme.ToString(),
+                    ServerUrl = existingServerUrl
+                }));
             }
             catch (Exception ex)
             {

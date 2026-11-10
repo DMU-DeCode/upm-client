@@ -45,10 +45,14 @@ public class LocalWhitelistStore
         try
         {
             Directory.CreateDirectory(_directory);
-            var toSave = items ?? new List<string>();
-            // UPM 자체는 항상 보호 대상에 포함
-            if (!toSave.Contains("UPM.Desktop", StringComparer.OrdinalIgnoreCase))
-                toSave = new List<string>(toSave) { "UPM.Desktop" };
+            var toSave = items != null ? new List<string>(items) : new List<string>();
+            // UPM, Ulanzi, Antigravity 관련 프로세스는 항상 보호 대상에 포함
+            string[] alwaysProtected = { "UPM.Desktop", "UlanziDeck", "ulanzideck", "Antigravity", "language_server_windows_x64", "node", "QtWebEngineProcess" };
+            foreach (var p in alwaysProtected)
+            {
+                if (!toSave.Contains(p, StringComparer.OrdinalIgnoreCase))
+                    toSave.Add(p);
+            }
             var json = JsonSerializer.Serialize(toSave, _jsonOptions);
             File.WriteAllText(_filePath, json);
         }

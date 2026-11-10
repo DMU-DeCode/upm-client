@@ -249,10 +249,11 @@ namespace UPM.Core
             "audiodg", "lsaiso", "SgrmBroker", "dashost", "ApplicationFrameHost",
             "SystemSettings", "UserOOBEBroker", " LockApp", "Widgets", "SearchIndexer",
             // 개발 도구 및 주요 런타임 안전 보호 (로컬 폴백 시 개발 환경 크래시 방지)
-            "devenv", "Code", "rider64", "MSBuild", "VBCSCompiler", "dotnet",
+            "devenv", "Code", "rider64", "MSBuild", "VBCSCompiler", "dotnet", "Antigravity",
+            "language_server_windows_x64", "node", "QtWebEngineProcess",
             "powershell", "pwsh", "cmd", "WindowsTerminal", "OpenConsole", "git",
-            // UPM 자체 보호
-            "UPM.Desktop"
+            // UPM 및 연동 하드웨어 컨트롤러 보호
+            "UPM.Desktop", "UlanziDeck", "ulanzideck"
         };
 
         private readonly HashSet<string> _userExcludedProcesses = new(StringComparer.OrdinalIgnoreCase);
@@ -272,8 +273,14 @@ namespace UPM.Core
                         _userExcludedProcesses.Add(ex);
                     }
                 }
-                // UPM 자체는 항상 보호 (껐다 켜도 유지)
+                // UPM 및 연동 하드웨어는 항상 보호 (껐다 켜도 유지)
                 _userExcludedProcesses.Add("UPM.Desktop");
+                _userExcludedProcesses.Add("UlanziDeck");
+                _userExcludedProcesses.Add("ulanzideck");
+                _userExcludedProcesses.Add("Antigravity");
+                _userExcludedProcesses.Add("language_server_windows_x64");
+                _userExcludedProcesses.Add("node");
+                _userExcludedProcesses.Add("QtWebEngineProcess");
             }
         }
 
@@ -350,7 +357,8 @@ namespace UPM.Core
         }
 
         private static bool IsCritical(string name) =>
-            _criticalProcessNames.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase));
+            _criticalProcessNames.Any(c => name.Equals(c, StringComparison.OrdinalIgnoreCase)) ||
+            name.StartsWith("language_server", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsGpuHardware(HardwareType type) =>
             type == HardwareType.GpuNvidia ||
@@ -390,8 +398,17 @@ namespace UPM.Core
         }
 
         /// <summary>
+        /// 화이트리스트 관리 창 및 프로세스 관리 UI에서 완전히 숨길 내부 보호 프로세스 여부
+        /// </summary>
+        public static bool IsHiddenInternalProcess(string name) =>
+            name.Equals("UPM.Desktop", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("UlanziDeck", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("ulanzideck", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
         /// 현재 실행 중인 모든 프로세스를 그룹화하여 반환합니다 (상위 8개 제한 없음).
         /// 화이트리스트 창 등 전체 프로세스 목록이 필요한 곳에 사용합니다.
+        /// (UPM.Desktop 및 UlanziDeck 등 내부 필수 프로세스는 목록에서 제외됨)
         /// </summary>
         public List<ProcessInfoModel> GetAllRunningProcesses()
         {
@@ -399,6 +416,7 @@ namespace UPM.Core
 
             // 프로세스 이름 단위 그룹화 (메모리 점유 합산 및 인스턴스 개수 집계)
             return rows
+                .Where(x => !IsHiddenInternalProcess(x.ProcessName))
                 .GroupBy(x => x.ProcessName, StringComparer.OrdinalIgnoreCase)
                 .Select(g =>
                 {

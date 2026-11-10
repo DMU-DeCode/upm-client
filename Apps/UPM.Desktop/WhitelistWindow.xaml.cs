@@ -214,7 +214,7 @@ namespace UPM.Desktop
             {
                 foreach (var name in items)
                 {
-                    if (!string.IsNullOrWhiteSpace(name))
+                    if (!string.IsNullOrWhiteSpace(name) && !HardwareMonitor.IsHiddenInternalProcess(name))
                         _whitelist.Add(name);
                 }
             }

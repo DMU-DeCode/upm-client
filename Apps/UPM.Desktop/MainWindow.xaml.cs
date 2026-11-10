@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,6 +12,7 @@ using UPM.Core;
 using UPM.Communication;
 using UPM.Desktop.ViewModels;
 using UPM.Models;
+using Forms = System.Windows.Forms;
 
 namespace UPM.Desktop
 {
@@ -20,10 +22,16 @@ namespace UPM.Desktop
         private readonly DispatcherTimer _timer;
         private readonly ApiServerClient _apiClient;
         private readonly MobileControlHttpServer _controlServer;
+        private readonly MqttBoostTrigger _mqttTrigger;
         private readonly string _machineId = Environment.MachineName;
+
+        // 시스템 트레이(숨겨진 아이콘) 지원
+        private Forms.NotifyIcon? _trayIcon;
+        private bool _isExitRequested = false;
 
         // 최근 수집한 상위 프로세스 목록. 모바일 최적화 요청(백그라운드 스레드)에서 UI 컨트롤 대신 사용합니다.
         private volatile List<ProcessInfoModel>? _latestTopProcesses;
+        private volatile SystemStatusModel? _latestSystemStatus;
         private int _tickCounter = 0;
         private bool _isTicking = false;
         private DashboardViewModel? _viewModel;
@@ -42,9 +50,13 @@ namespace UPM.Desktop
 
             // 1. 수집 엔진 및 서버 클라이언트 초기화
             _monitor = new HardwareMonitor();
-            _apiClient = new ApiServerClient(UpmAppSettings.MetricsServerBaseUrl);
+            _apiClient = new ApiServerClient(UpmAppSettings.GetMetricsServerBaseUrl());
 
-            _controlServer = new MobileControlHttpServer(_monitor, optimizeHandler: RunMobileOptimizeAsync);
+            _controlServer = new MobileControlHttpServer(
+                _monitor,
+                optimizeHandler: RunMobileOptimizeAsync,
+                showWindowHandler: ShowWindowFromControl,
+                metricsProvider: () => _latestSystemStatus);
             try
             {
                 _controlServer.Start();
@@ -53,6 +65,11 @@ namespace UPM.Desktop
             {
                 System.Diagnostics.Debug.WriteLine($"[UPM] 모바일 제어 서버를 시작하지 못했습니다: {ex.Message}");
             }
+
+            // 스트림덱(MQTT) 트리거: 모바일 최적화와 같은 경로로 빠른 최적화 실행
+            _mqttTrigger = new MqttBoostTrigger(RunMobileOptimizeAsync);
+            _mqttTrigger.BoostCompleted += OnMqttBoostCompleted;
+            _mqttTrigger.Start();
 
             // 2. 초기 1회 하드웨어 사양 로드 및 서버 예외 목록 수신
             _ = LoadHardwareSpecsAsync();
@@ -71,6 +88,9 @@ namespace UPM.Desktop
             };
             _timer.Tick += Timer_Tick;
             _timer.Start();
+
+            // 4. 시스템 트레이(숨겨진 아이콘) 초기화
+            InitializeTrayIcon();
         }
 
         private async Task LoadServerExceptionsAsync()
@@ -148,14 +168,18 @@ namespace UPM.Desktop
 
                 TopProcessItems.ItemsSource = status.TopProcesses;
                 _latestTopProcesses = status.TopProcesses;
+                _latestSystemStatus = status;
 
-                // 5초마다 서버로 상태 정보 전송
+                // 5초마다 서버로 상태 정보 전송 (+ 외부 망 원격 명령 피기백 수신)
                 _tickCounter++;
                 if (_tickCounter >= 5)
                 {
                     _tickCounter = 0;
-                    _ = _apiClient.SendSystemStatusAsync(status);
+                    _ = SyncStatusAndHandleRemoteCommandAsync(status);
                 }
+
+                // Ulanzi Deck 등 로컬 파일 기반 WebView(file://)가 CORS 없이 읽을 수 있도록 metrics.js 기록
+                WriteLocalMetricsJs(status);
             }
             catch (Exception ex)
             {
@@ -164,6 +188,28 @@ namespace UPM.Desktop
             finally
             {
                 _isTicking = false;
+            }
+        }
+
+        private async Task SyncStatusAndHandleRemoteCommandAsync(SystemStatusModel status)
+        {
+            var cmd = await _apiClient.SendSystemStatusWithCommandAsync(status);
+            if (string.IsNullOrEmpty(cmd))
+                return;
+
+            System.Diagnostics.Debug.WriteLine($"[UPM] 서버 피기백 원격 명령 수신: {cmd}");
+            if (cmd.Equals("optimize", StringComparison.OrdinalIgnoreCase))
+            {
+                var cleared = await RunMobileOptimizeAsync();
+                OnMqttBoostCompleted(cleared);
+            }
+            else if (cmd.Equals("shutdown", StringComparison.OrdinalIgnoreCase))
+            {
+                SystemPowerController.InitiateShutdown();
+            }
+            else if (cmd.Equals("restart", StringComparison.OrdinalIgnoreCase))
+            {
+                SystemPowerController.InitiateRestart();
             }
         }
 
@@ -308,6 +354,145 @@ namespace UPM.Desktop
             return Task.Run(async () => await _monitor.OptimizeSystemAsync(_apiClient, _machineId, processes));
         }
 
+        private void ShowWindowFromControl()
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                ShowInTaskbar = true;
+                Show();
+                if (WindowState == WindowState.Minimized)
+                    WindowState = WindowState.Normal;
+                Activate();
+                Focus();
+                Topmost = true;
+                Topmost = false;
+            });
+        }
+
+        private void InitializeTrayIcon()
+        {
+            try
+            {
+                System.Drawing.Icon? icon = null;
+                var streamInfo = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/upm_icon.ico", UriKind.Absolute));
+                if (streamInfo != null)
+                {
+                    using var stream = streamInfo.Stream;
+                    icon = new System.Drawing.Icon(stream);
+                }
+                else
+                {
+                    var exePath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(exePath) && System.IO.File.Exists(exePath))
+                        icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+                }
+
+                var contextMenu = new Forms.ContextMenuStrip();
+                var openItem = new Forms.ToolStripMenuItem("UPM 열기");
+                openItem.Click += (_, _) => ShowWindowFromControl();
+
+                var boostItem = new Forms.ToolStripMenuItem("빠른 최적화");
+                boostItem.Click += async (_, _) =>
+                {
+                    int cleared = await RunMobileOptimizeAsync();
+                    OnMqttBoostCompleted(cleared);
+                };
+
+                var exitItem = new Forms.ToolStripMenuItem("완전히 종료");
+                exitItem.Click += (_, _) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        _isExitRequested = true;
+                        Close();
+                    });
+                };
+
+                contextMenu.Items.Add(openItem);
+                contextMenu.Items.Add(boostItem);
+                contextMenu.Items.Add(new Forms.ToolStripSeparator());
+                contextMenu.Items.Add(exitItem);
+
+                _trayIcon = new Forms.NotifyIcon
+                {
+                    Icon = icon ?? System.Drawing.SystemIcons.Application,
+                    Text = "UPM - Universal PC Manager",
+                    Visible = true,
+                    ContextMenuStrip = contextMenu
+                };
+
+                _trayIcon.DoubleClick += (_, _) => ShowWindowFromControl();
+                _trayIcon.MouseClick += (_, e) =>
+                {
+                    if (e.Button == Forms.MouseButtons.Left)
+                        ShowWindowFromControl();
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UPM] 트레이 아이콘 초기화 실패: {ex.Message}");
+            }
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (!_isExitRequested)
+            {
+                e.Cancel = true;
+                ShowInTaskbar = false;
+                Hide();
+                return;
+            }
+            base.OnClosing(e);
+        }
+
+        private static void WriteLocalMetricsJs(SystemStatusModel status)
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                var pluginDir = System.IO.Path.Combine(
+                    appData,
+                    "Ulanzi",
+                    "UlanziDeck",
+                    "Plugins",
+                    "com.ulanzi.ulanzistudio.upmmonitor.ulanziPlugin",
+                    "plugin");
+                if (System.IO.Directory.Exists(pluginDir))
+                {
+                    var jsPath = System.IO.Path.Combine(pluginDir, "metrics.js");
+                    var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    var content = string.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "window.__UPM_METRICS__ = {{ online: true, cpu: {0:F1}, ram: {1:F1}, gpu: {2:F1}, gpuTemp: {3:F1}, ts: {4} }};",
+                        status.CpuUsagePercent,
+                        status.RamUsagePercent,
+                        status.GpuUsagePercent,
+                        status.GpuTemperatureCelsius,
+                        ts);
+                    System.IO.File.WriteAllText(jsPath, content);
+                }
+            }
+            catch
+            {
+                // 파일 쓰기 충돌 무시
+            }
+        }
+
+        /// <summary>스트림덱 부스트 완료 시 버튼 라벨로 잠깐 결과 표시 (게임 중 포커스를 뺏지 않도록 MessageBox 미사용).</summary>
+        private void OnMqttBoostCompleted(int count)
+        {
+            Dispatcher.InvokeAsync(async () =>
+            {
+                if (!BoostButton.IsEnabled)
+                    return; // 수동 최적화 진행 중이면 라벨을 건드리지 않음
+                BoostButtonLabel.Text = $"{count}개 정리됨";
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                if (BoostButton.IsEnabled)
+                    BoostButtonLabel.Text = "빠른 최적화";
+            });
+        }
+
         private async void BoostButton_Click(object sender, RoutedEventArgs e)
         {
             BoostButton.IsEnabled = false;
@@ -376,9 +561,17 @@ namespace UPM.Desktop
 
         protected override void OnClosed(EventArgs e)
         {
+            if (_trayIcon != null)
+            {
+                _trayIcon.Visible = false;
+                _trayIcon.Dispose();
+                _trayIcon = null;
+            }
             ThemeManager.ThemeChanged -= OnThemeChanged;
             _timer.Stop();
             _controlServer.Dispose();
+            _mqttTrigger.BoostCompleted -= OnMqttBoostCompleted;
+            _mqttTrigger.Dispose();
             _apiClient.Dispose();
             _monitor.Dispose();
             base.OnClosed(e);

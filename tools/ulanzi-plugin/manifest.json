@@ -1,0 +1,162 @@
+{
+  "Author": "UPM",
+  "Name": "UPM Monitor",
+  "Description": "UPM 하드웨어 실시간 모니터링 및 컨트롤",
+  "Icon": "Images/app.png",
+  "Version": "1.0.0",
+  "Category": "UPM Monitor",
+  "CategoryIcon": "Images/app.png",
+  "CodePath": "plugin/app.html",
+  "Type": "JavaScript",
+  "SupportedInMultiActions": false,
+  "PrivateAPI": true,
+  "UUID": "com.ulanzi.ulanzistudio.upmmonitor",
+  "Actions": [
+    {
+      "Name": "UPM 앱 열기",
+      "Icon": "Images/app.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "UPM",
+          "Image": "Images/app.png"
+        }
+      ],
+      "Tooltip": "클릭 시 UPM 창을 최상위로 팝업합니다.",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.app",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "빠른 최적화",
+      "Icon": "Images/boost.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "Boost",
+          "Image": "Images/boost.png"
+        }
+      ],
+      "Tooltip": "클릭 시 고부하 프로세스를 정리합니다.",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.boost",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "CPU 아이콘",
+      "Icon": "Images/cpuicon.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "CPU",
+          "Image": "Images/cpuicon.png"
+        }
+      ],
+      "Tooltip": "CPU 그래픽 아이콘",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.cpuicon",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "RAM 아이콘",
+      "Icon": "Images/ramicon.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "RAM",
+          "Image": "Images/ramicon.png"
+        }
+      ],
+      "Tooltip": "RAM 그래픽 아이콘",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.ramicon",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "GPU 아이콘",
+      "Icon": "Images/gpuicon.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "GPU",
+          "Image": "Images/gpuicon.png"
+        }
+      ],
+      "Tooltip": "GPU 그래픽 아이콘",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.gpuicon",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "온도 아이콘",
+      "Icon": "Images/tempicon.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "TEMP",
+          "Image": "Images/tempicon.png"
+        }
+      ],
+      "Tooltip": "GPU 온도 그래픽 아이콘",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.tempicon",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "CPU 사용률 수치",
+      "Icon": "Images/cpuval.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "CPU %",
+          "Image": "Images/cpuval.png"
+        }
+      ],
+      "Tooltip": "실시간 CPU 사용률 (%)",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.cpuval",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "RAM 사용률 수치",
+      "Icon": "Images/ramval.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "RAM %",
+          "Image": "Images/ramval.png"
+        }
+      ],
+      "Tooltip": "실시간 RAM 사용률 (%)",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.ramval",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "GPU 사용률 수치",
+      "Icon": "Images/gpuval.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "GPU %",
+          "Image": "Images/gpuval.png"
+        }
+      ],
+      "Tooltip": "실시간 GPU 사용률 (%)",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.gpuval",
+      "SupportedInMultiActions": false
+    },
+    {
+      "Name": "GPU 온도 수치",
+      "Icon": "Images/tempval.png",
+      "state": 0,
+      "States": [
+        {
+          "Name": "GPU °C",
+          "Image": "Images/tempval.png"
+        }
+      ],
+      "Tooltip": "실시간 GPU 온도 (°C)",
+      "UUID": "com.ulanzi.ulanzistudio.upmmonitor.tempval",
+      "SupportedInMultiActions": false
+    }
+  ],
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ]
+}

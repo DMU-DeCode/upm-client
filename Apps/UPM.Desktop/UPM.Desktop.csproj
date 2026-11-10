@@ -7,8 +7,21 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\upm_icon.ico</ApplicationIcon>
+    <!-- 버전/제품 정보 (Inno Setup 스크립트가 exe 버전을 읽어 설치 파일 버전으로 사용) -->
+    <Version>1.0.0</Version>
+    <Product>UPM - Universal PC Manager</Product>
+    <Company>UPM</Company>
+    <AssemblyTitle>UPM Desktop</AssemblyTitle>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.2" />
@@ -24,6 +37,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\gpu_temperature_icon.png" />
+    <Resource Include="Assets\upm_icon.ico" />
     <Resource Include="Assets\upm_icon.png" />
     <Resource Include="Assets\upm_logo_dark.gif" />
     <Resource Include="Assets\upm_logo_light.png" />

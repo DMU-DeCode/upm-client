@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="28" fill="#18181B"/>
+  <rect x="66" y="32" width="12" height="48" rx="6" fill="#374151"/>
+  <circle cx="72" cy="88" r="18" fill="#EF4444"/>
+  <rect x="68" y="52" width="8" height="30" fill="#EF4444"/>
+  <circle cx="72" cy="88" r="8" fill="#FCA5A5"/>
+  <text x="72" y="126" font-size="16" font-weight="900" fill="#F87171" text-anchor="middle" font-family="sans-serif">TEMP</text>
+</svg>
+

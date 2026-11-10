@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="28" fill="#18181B"/>
+  <circle cx="72" cy="72" r="44" stroke="#6366F1" stroke-width="8" fill="none"/>
+  <path d="M52 56 L72 90 L92 56" stroke="#A855F7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="72" y="128" font-size="16" font-weight="bold" fill="#E4E4E7" text-anchor="middle" font-family="sans-serif">UPM</text>
+</svg>
+

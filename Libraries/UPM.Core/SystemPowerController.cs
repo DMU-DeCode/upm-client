@@ -27,4 +27,25 @@ public static class SystemPowerController
         if (process == null)
             throw new InvalidOperationException("shutdown 프로세스를 시작하지 못했습니다.");
     }
+
+    /// <summary>
+    /// 시스템 재시작을 예약합니다. 기본 10초 후 재시작되며, CMD에서 <c>shutdown /a</c>로 취소할 수 있습니다.
+    /// </summary>
+    public static void InitiateRestart(int delaySeconds = 10)
+    {
+        if (delaySeconds < 0)
+            delaySeconds = 0;
+
+        var args = $"/r /t {delaySeconds} /c \"UPM 모바일 앱에서 재시작 요청\"";
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = "shutdown",
+            Arguments = args,
+            CreateNoWindow = true,
+            UseShellExecute = false,
+        });
+
+        if (process == null)
+            throw new InvalidOperationException("shutdown 프로세스를 시작하지 못했습니다.");
+    }
 }
